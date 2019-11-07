@@ -22,16 +22,6 @@ class DartCodeGenerator implements CodeGenerator {
 
   DartCodeGenerator(this.basePath);
 
-  Iterable<Class> codeForCollection(List<ast.Collection> collections) {
-    return collections.map((collection) {
-      final name = "${collection.name}Collection";
-      return [
-        Class((b) => b..name = name),
-        ...codeForDocument(collection.document, collection)
-      ];
-    }).expand((c) => c);
-  }
-
   Reference _dartType(String firestoreType) {
     switch (firestoreType) {
       case "string":
@@ -56,42 +46,88 @@ class DartCodeGenerator implements CodeGenerator {
     }
   }
 
+  Reference _referFirestore(String symbol) =>
+      refer(symbol, "package:cloud_firestore/cloud_firestore.dart");
+
   Reference _futureRefer(String symbol, [String url]) {
     return TypeReference((b) => b
       ..symbol = "Future"
       ..types.add(refer(symbol, url)));
   }
 
+  String _documentClassName(ast.Collection collection) =>
+      collection.document.name ?? "${collection.name}__nonamedocument__";
+
+  Iterable<Class> codeForCollection(List<ast.Collection> collections) {
+    return collections.map((collection) {
+      final name = "${collection.name}Collection";
+      return [
+        Class((b) => b
+          ..name = name
+          ..fields.add(Field((b) => b
+            ..modifier = FieldModifier.final$
+            ..type = _referFirestore("CollectionReference")
+            ..name = "reference"))
+          ..constructors.addAll([
+            Constructor((b) => b
+              ..requiredParameters.add(Parameter((b) => b
+                ..toThis = true
+                ..name = "reference"))),
+            Constructor((b) => b
+              ..factory = true
+              ..name = "fromPath"
+              ..requiredParameters.add(Parameter((b) => b
+                ..type = refer("String")
+                ..name = "path"))
+              ..body = Code("return ${name}(_firestore.collection(path));")),
+          ])
+          ..methods.addAll([
+            Method((b) => b
+              ..returns = refer("${_documentClassName(collection)}Document")
+              ..name = "documentById"
+              ..requiredParameters.add(Parameter((b) => b
+                ..type = refer("String")
+                ..name = "id"))
+              ..body = Code(
+                  "return ${_documentClassName(collection)}Document(reference.document(id));")),
+          ])),
+        ...codeForDocument(collection.document, collection)
+      ];
+    }).expand((c) => c);
+  }
+
   Iterable<Class> codeForDocument(
       ast.Document document, ast.Collection parent) {
-    final name = document.name ?? "${parent.name}_nonamedocument_";
+    final name = _documentClassName(parent);
     final snapshotName = "${name}Snapshot";
+    final referenceName = "${name}Document";
     final documentRefClass = Class((b) => b
-      ..name = "${name}Document"
+      ..name = referenceName
       ..fields.addAll([
         Field((b) => b
           ..modifier = FieldModifier.final$
-          ..type = refer("String")
-          ..name = "id"),
+          ..type = _referFirestore("DocumentReference")
+          ..name = "reference"),
+      ])
+      ..constructors.addAll([
+        Constructor((b) => b
+          ..requiredParameters.add(Parameter((b) => b
+            ..toThis = true
+            ..name = "reference"))),
+        Constructor((b) => b
+          ..factory = true
+          ..name = "fromPath"
+          ..requiredParameters.add(Parameter((b) => b
+            ..type = refer("String")
+            ..name = "path"))
+          ..body = Code("return ${referenceName}(_firestore.document(path));")),
       ])
       ..methods.addAll([
-        Method((b) => b
-          ..returns = refer("String")
-          ..type = MethodType.getter
-          ..name = "path"
-          // TODO: How to get the path of this document
-          ..body = Code("return /* TODO: どうやってパス取ってこよう… */id;")),
-        Method((b) => b
-          ..returns = refer("DocumentReference",
-              "package:cloud_firestore/cloud_firestore.dart")
-          ..type = MethodType.getter
-          ..name = "_reference"
-          ..body = Code("return _firestore.document(path);")),
         Method((b) => b
           ..returns = _futureRefer(snapshotName)
           ..name = "getSnapshot"
           ..body = Code.scope((allocate) => """
-            return _reference.get().then((s) => ${snapshotName}.fromSnapshot(s));
+            return reference.get().then((s) => ${snapshotName}.fromSnapshot(s));
           """)),
       ]));
 
@@ -114,8 +150,7 @@ class DartCodeGenerator implements CodeGenerator {
           ..factory = true
           ..name = "fromSnapshot"
           ..requiredParameters.add((Parameter((b) => b
-            ..type = refer("DocumentSnapshot",
-                "package:cloud_firestore/cloud_firestore.dart")
+            ..type = _referFirestore("DocumentSnapshot")
             ..name = "documentSnapshot")))
           ..body = Code("""
             if (documentSnapshot.exists) {
@@ -135,8 +170,7 @@ class DartCodeGenerator implements CodeGenerator {
   }
 
   Iterable<Spec> extraCodes() {
-    final firestoreReference =
-        refer("Firestore", "package:cloud_firestore/cloud_firestore.dart");
+    final firestoreReference = _referFirestore("Firestore");
     return [
       Field((b) => b
         ..type = firestoreReference
