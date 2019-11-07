@@ -24,9 +24,14 @@ class DartCodeGenerator implements CodeGenerator {
 
   DartCodeGenerator(this.basePath);
 
-  Class codeForCollection(ast.Collection collection) {
-    final name = collection.name;
-    return Class((b) => b..name = name);
+  Iterable<Class> codeForCollection(List<ast.Collection> collections) {
+    return collections.map((collection) {
+      final name = "${collection.name}Collection";
+      return [
+        Class((b) => b..name = name),
+        ...codeForDocument(collection.document, collection)
+      ];
+    }).expand((c) => c);
   }
 
   Reference _dartType(String firestoreType) {
@@ -54,10 +59,9 @@ class DartCodeGenerator implements CodeGenerator {
   }
 
   Iterable<Class> codeForDocument(
-      ast.Document document, ast.Collection parent) sync* {
+      ast.Document document, ast.Collection parent) {
     final name = document.name ?? "${parent.name}_nonamedocument_";
-    final documentRefClass = Class((b) => b..name = name);
-    yield documentRefClass;
+    final documentRefClass = Class((b) => b..name = "${name}Document");
 
     final documentSnapshotClass = Class((b) => b
       ..name = "${name}SnapShot"
@@ -71,17 +75,17 @@ class DartCodeGenerator implements CodeGenerator {
             .replace(document.fields.map((f) => Parameter((b) => b
               ..toThis = true
               ..name = f.name))))));
-    yield documentSnapshotClass;
+    return [
+      documentRefClass,
+      documentSnapshotClass,
+      ...codeForCollection(document.collections),
+    ];
   }
 
   @override
   Iterable<GeneratedCodeFile> generate(ast.Schema schema) {
-    final collectionClasses = schema.collections.map(codeForCollection);
-    final documentClasses = schema.collections
-        .map((c) => codeForDocument(c.document, c))
-        .expand((c) => c);
-    final lib = Library(
-        (b) => b..body.addAll(collectionClasses)..body.addAll(documentClasses));
+    final classes = codeForCollection(schema.collections);
+    final lib = Library((b) => b..body.addAll(classes));
     return [
       GeneratedCodeFile(basePath + "firestore_scheme.g.dart",
           _formatter.format("${lib.accept(DartEmitter.scoped())}"))
