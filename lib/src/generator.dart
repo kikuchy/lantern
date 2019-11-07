@@ -120,7 +120,7 @@ class DartCodeGenerator implements CodeGenerator {
           ..body = Code("""
             if (documentSnapshot.exists) {
               return ${snapshotName}(
-                ${document.fields.map((f) => "${f.name}: documentSnapshot[\"${f.name}\"]").join(",\n")}
+                ${document.fields.map((f) => "${f.name}: _convertDartType(documentSnapshot[\"${f.name}\"])").join(",\n")}
               );
             } else {
               return null;
@@ -149,6 +149,44 @@ class DartCodeGenerator implements CodeGenerator {
           ..type = firestoreReference
           ..name = "instance"))
         ..body = Code("_firestore = instance;")),
+      Code("\ntypedef TypeConverter<T, U> = T Function(U);\n"),
+      Method((b) => b
+        ..returns = refer("T")
+        ..name = "_idConverter"
+        ..types.add(refer("T"))
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer(("T"))
+          ..name = "v"))
+        ..body = Code("return v;")),
+      Method((b) => b
+        ..returns = refer("DateTime")
+        ..name = "_dateTimeConverter"
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"))
+        ..body = Code("return v?.toDate();")),
+      Field((b) => b
+        ..type = TypeReference((b) => b
+          ..symbol = "Map"
+          ..types.addAll([refer("Type"), refer("TypeConverter")]))
+        ..name = "_dartTypeConverterMap"
+        // TODO: Converter for Geopoint
+        ..assignment = Code.scope((allocate) => """
+          {
+            DateTime: _dateTimeConverter,
+            // TODO: Converter for Geopoint
+          }
+        """)),
+      Method((b) => b
+        ..returns = refer("T")
+        ..name = "_convertDartType"
+        ..types.add(refer("T"))
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"))
+        ..body = Code("""
+            return (_dartTypeConverterMap[T] ?? _idConverter).call(v);
+        """)),
     ];
   }
 
