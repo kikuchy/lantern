@@ -7,8 +7,8 @@ class DartCodeGenerator implements CodeGenerator {
 
   DartCodeGenerator(this.basePath);
 
-  Reference _dartType(String firestoreType) {
-    switch (firestoreType) {
+  Reference _dartType(ast.FieldType firestoreType) {
+    switch (firestoreType.name) {
       case "string":
         return refer("String");
       case "url":

@@ -1,5 +1,6 @@
 class Schema {
   List<Collection> collections = [];
+
   Schema(this.collections);
 
   @override
@@ -10,9 +11,9 @@ class Schema {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is Schema &&
-              runtimeType == other.runtimeType &&
-              collections == other.collections;
+      other is Schema &&
+          runtimeType == other.runtimeType &&
+          collections == other.collections;
 
   @override
   int get hashCode => collections.hashCode;
@@ -33,17 +34,14 @@ class Collection {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is Collection &&
-              runtimeType == other.runtimeType &&
-              name == other.name &&
-              params == other.params &&
-              document == other.document;
+      other is Collection &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          params == other.params &&
+          document == other.document;
 
   @override
-  int get hashCode =>
-      name.hashCode ^
-      params.hashCode ^
-      document.hashCode;
+  int get hashCode => name.hashCode ^ params.hashCode ^ document.hashCode;
 }
 
 class CollectionParameter {
@@ -60,15 +58,13 @@ class CollectionParameter {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is CollectionParameter &&
-              runtimeType == other.runtimeType &&
-              name == other.name &&
-              value == other.value;
+      other is CollectionParameter &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          value == other.value;
 
   @override
-  int get hashCode =>
-      name.hashCode ^
-      value.hashCode;
+  int get hashCode => name.hashCode ^ value.hashCode;
 }
 
 class Document {
@@ -87,19 +83,16 @@ class Document {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is Document &&
-              runtimeType == other.runtimeType &&
-              name == other.name &&
-              params == other.params &&
-              fields == other.fields &&
-              collections == other.collections;
+      other is Document &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          params == other.params &&
+          fields == other.fields &&
+          collections == other.collections;
 
   @override
   int get hashCode =>
-      name.hashCode ^
-      params.hashCode ^
-      fields.hashCode ^
-      collections.hashCode;
+      name.hashCode ^ params.hashCode ^ fields.hashCode ^ collections.hashCode;
 }
 
 class DocumentParameter {
@@ -116,19 +109,17 @@ class DocumentParameter {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is DocumentParameter &&
-              runtimeType == other.runtimeType &&
-              name == other.name &&
-              value == other.value;
+      other is DocumentParameter &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          value == other.value;
 
   @override
-  int get hashCode =>
-      name.hashCode ^
-      value.hashCode;
+  int get hashCode => name.hashCode ^ value.hashCode;
 }
 
 class Field {
-  String type;
+  FieldType type;
   String name;
 
   Field(this.type, this.name);
@@ -141,13 +132,34 @@ class Field {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is Field &&
-              runtimeType == other.runtimeType &&
-              type == other.type &&
-              name == other.name;
+      other is Field &&
+          runtimeType == other.runtimeType &&
+          type == other.type &&
+          name == other.name;
 
   @override
-  int get hashCode =>
-      type.hashCode ^
-      name.hashCode;
+  int get hashCode => type.hashCode ^ name.hashCode;
+}
+
+class FieldType {
+  String name;
+  bool nullable;
+
+  FieldType(this.name, this.nullable);
+
+  @override
+  String toString() {
+    return "$name${nullable ? "?" : ""}";
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FieldType &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          nullable == other.nullable;
+
+  @override
+  int get hashCode => name.hashCode ^ nullable.hashCode;
 }

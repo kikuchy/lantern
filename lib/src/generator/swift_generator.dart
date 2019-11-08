@@ -11,29 +11,41 @@ class SwiftCodeGenerator implements CodeGenerator {
     return codeForCollections(schema.collections);
   }
 
-  String _swiftType(String firestoreType) {
-    switch (firestoreType) {
+  String _swiftType(ast.FieldType firestoreType) {
+    String name;
+    switch (firestoreType.name) {
       case "string":
-        return "String";
+        name = "String";
+        break;
       case "url":
-        return "URL";
+        name = "URL";
+        break;
       case "number":
-        return "Double";
+        name = "Double";
+        break;
       case "integer":
-        return "Int";
+        name = "Int";
+        break;
       case "boolean":
-        return "Bool";
+        name = "Bool";
+        break;
       case "map":
-        return "[String: Any]";
+        name = "[String: Any]";
+        break;
       case "array":
-        return "[Any]";
+        name = "[Any]";
+        break;
       case "timestamp":
-        return "Timestamp";
+        name = "Timestamp";
+        break;
       case "geopoint":
-        return "GeoPoint";
+        name = "GeoPoint";
+        break;
       case "file":
-        return "File";
+        name = "File";
+        break;
     }
+    return "$name${firestoreType.nullable ? "?" : ""}";
   }
 
   String _swiftDefaultValue(String firestoreType) {
@@ -84,7 +96,7 @@ extension Firebase {
         }""" : ""}
 
         struct Model: Modelable & Codable {
-            ${document.fields.map((f) => "var ${f.name}: ${_swiftType(f.type)} = ${_swiftDefaultValue(f.type)}").join("\n            ")}
+            ${document.fields.map((f) => "var ${f.name}: ${_swiftType(f.type)}${f.type.nullable ? "" : " = ${_swiftDefaultValue(f.type.name)}"}").join("\n            ")}
         }
     }
 }

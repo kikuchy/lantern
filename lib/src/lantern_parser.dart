@@ -22,7 +22,8 @@ class LanternParserDefinition extends LanternGrammarDefinition {
       });
 
   @override
-  Parser collectionIdentity() => super.collectionIdentity().map((each) => each[0] + each[1].join());
+  Parser collectionIdentity() =>
+      super.collectionIdentity().map((each) => each[0] + each[1].join());
 
   @override
   Parser collectionParameters() =>
@@ -66,7 +67,11 @@ class LanternParserDefinition extends LanternGrammarDefinition {
       .map((each) => DocumentParameter(each[0], each[2]));
 
   @override
-  Parser field() => super.field().map((each) => Field(each[0], each[1]));
+  Parser field() => super.field().map(
+      (each) => Field(FieldType(each[0][0], each[0][1] ?? false), each[1]));
+
+  @override
+  Parser nullableSymbol() => super.nullableSymbol().map((each) => each != null);
 
   @override
   Parser fieldIdentity() => super.fieldIdentity().map((each) => each.join());

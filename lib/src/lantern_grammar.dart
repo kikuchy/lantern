@@ -86,20 +86,23 @@ class LanternGrammarDefinition extends GrammarDefinition {
 
   Parser documentContent() => (ref(field) | ref(collection)).star();
 
-  Parser field() => ref(type) & ref(fieldIdentity);
+  Parser field() => ref(fieldType) & ref(fieldIdentity);
 
-  Parser type() =>
-      ref(stringType) |
-      ref(urlType) |
-      ref(numberType) |
-      ref(integerType) |
-      ref(booleanType) |
-      ref(mapType) |
-      ref(arrayType) |
-      ref(timestampType) |
-      ref(geopointType) |
-      ref(referenceType) |
-      ref(nullType);
+  Parser fieldType() =>
+      (ref(stringType) |
+          ref(urlType) |
+          ref(numberType) |
+          ref(integerType) |
+          ref(booleanType) |
+          ref(mapType) |
+          ref(arrayType) |
+          ref(timestampType) |
+          ref(geopointType) |
+          ref(referenceType) |
+          ref(nullType)) &
+      ref(nullableSymbol).optional();
+
+  Parser nullableSymbol() => ref(token, "?");
 
   Parser stringType() => ref(token, "string");
 

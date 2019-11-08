@@ -1,4 +1,3 @@
-import 'package:lantern/lantern.dart';
 import 'package:lantern/src/ast.dart';
 import 'package:lantern/src/lantern_parser.dart';
 import 'package:test/test.dart';
@@ -33,11 +32,14 @@ void main() {
                   DocumentParameter("saveCreationDate", true),
                   DocumentParameter("saveModifiedDate", true)
                 ], [
-                  Field("string", "hoge"),
-                  Field("number", "fuga"),
+                  Field(FieldType("string", false), "hoge"),
+                  Field(FieldType("number", false), "fuga"),
                 ], [
-                  Collection("talks", [],
-                      Document(null, [], [Field("boolean", "isHoge")], []))
+                  Collection(
+                      "talks",
+                      [],
+                      Document(null, [],
+                          [Field(FieldType("boolean", false), "isHoge")], []))
                 ]))
           ]),
           """
@@ -53,6 +55,22 @@ void main() {
           }
         }
     """),
+      _SuccessCase(
+          "nullable field",
+          Schema([
+            Collection(
+                "hoge",
+                [],
+                Document(
+                    null, [], [Field(FieldType("string", true), "hoge")], []))
+          ]),
+          """
+        collection hoge {
+          document {
+            string? hoge
+          }
+        }
+      """),
     ];
     cases.forEach((c) {
       test("can parse ${c.description}", () {
