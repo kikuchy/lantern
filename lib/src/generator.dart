@@ -78,7 +78,8 @@ class DartCodeGenerator implements CodeGenerator {
             Constructor((b) => b
               ..requiredParameters.add(Parameter((b) => b
                 ..toThis = true
-                ..name = "reference"))),
+                ..name = "reference"))
+              ..initializers.add(Code("assert(reference != null)"))),
             Constructor((b) => b
               ..factory = true
               ..name = "fromPath"
@@ -119,7 +120,8 @@ class DartCodeGenerator implements CodeGenerator {
         Constructor((b) => b
           ..requiredParameters.add(Parameter((b) => b
             ..toThis = true
-            ..name = "reference"))),
+            ..name = "reference"))
+          ..initializers.add(Code("assert(reference != null)"))),
         Constructor((b) => b
           ..factory = true
           ..name = "fromPath"
@@ -152,6 +154,37 @@ class DartCodeGenerator implements CodeGenerator {
           ..returns = _futureRefer("void")
           ..name = "delete"
           ..body = Code("return reference.delete();")),
+        Method((b) => b
+          ..returns = _futureRefer(snapshotName)
+          ..name = "create"
+          ..optionalParameters
+              .addAll(document.fields.map((f) => Parameter((b) => b
+                ..named = true
+                ..annotations.add(refer("required", "package:meta/meta.dart"))
+                ..name = f.name
+                ..type = _dartType(f.type))))
+          ..body = Code("""
+            return reference
+                .setData({
+                  ${document.fields.map((f) => "\"${f.name}\": ${f.name}").join(",")}
+                })
+                .then((_) => ${snapshotName}(${document.fields.map((f) => "${f.name}: ${f.name}").join(",")}));
+          """)),
+        Method((b) => b
+          ..returns = _futureRefer(snapshotName)
+          ..name = "update"
+          ..optionalParameters
+              .addAll(document.fields.map((f) => Parameter((b) => b
+                ..named = true
+                ..name = f.name
+                ..type = _dartType(f.type))))
+          ..body = Code("""
+            return reference
+                .updateData({
+                  ${document.fields.map((f) => "\"${f.name}\": ${f.name}").join(",")}
+                })
+                .then((_) => getSnapshot());
+          """)),
       ]));
 
     final documentSnapshotClass = Class((b) => b
