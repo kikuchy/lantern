@@ -1,5 +1,5 @@
 import 'package:lantern/src/ast.dart';
-import 'package:lantern/src/generator.dart';
+import 'package:lantern/src/generator/generator.dart';
 import 'package:test/test.dart';
 
 void main() {

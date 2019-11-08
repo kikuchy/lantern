@@ -1,4 +1,4 @@
-import 'package:lantern/src/generator.dart';
+import 'package:lantern/src/generator/generator.dart';
 import 'package:lantern/src/lantern_parser.dart';
 
 List<GeneratedCodeFile> parseLantern(String source) {

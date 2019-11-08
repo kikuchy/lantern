@@ -1,19 +1,4 @@
-import 'package:code_builder/code_builder.dart';
-import 'package:dart_style/dart_style.dart';
-import 'package:lantern/src/ast.dart' as ast;
-
-class GeneratedCodeFile {
-  final String filePath;
-  final String content;
-
-  const GeneratedCodeFile(this.filePath, this.content);
-}
-
-abstract class CodeGenerator {
-  String get basePath;
-
-  Iterable<GeneratedCodeFile> generate(ast.Schema schema);
-}
+part of './generator.dart';
 
 class DartCodeGenerator implements CodeGenerator {
   final _formatter = DartFormatter();
@@ -159,10 +144,10 @@ class DartCodeGenerator implements CodeGenerator {
           ..name = "create"
           ..optionalParameters
               .addAll(document.fields.map((f) => Parameter((b) => b
-                ..named = true
-                ..annotations.add(refer("required", "package:meta/meta.dart"))
-                ..name = f.name
-                ..type = _dartType(f.type))))
+            ..named = true
+            ..annotations.add(refer("required", "package:meta/meta.dart"))
+            ..name = f.name
+            ..type = _dartType(f.type))))
           ..body = Code("""
             return reference
                 .setData({
@@ -175,9 +160,9 @@ class DartCodeGenerator implements CodeGenerator {
           ..name = "update"
           ..optionalParameters
               .addAll(document.fields.map((f) => Parameter((b) => b
-                ..named = true
-                ..name = f.name
-                ..type = _dartType(f.type))))
+            ..named = true
+            ..name = f.name
+            ..type = _dartType(f.type))))
           ..body = Code("""
             return reference
                 .updateData({
@@ -205,10 +190,10 @@ class DartCodeGenerator implements CodeGenerator {
           ..constant = true
           ..optionalParameters
               .replace(document.fields.map((f) => Parameter((b) => b
-                ..named = true
-                ..annotations.add(refer("required", "package:meta/meta.dart"))
-                ..toThis = true
-                ..name = f.name)))),
+            ..named = true
+            ..annotations.add(refer("required", "package:meta/meta.dart"))
+            ..toThis = true
+            ..name = f.name)))),
         Constructor((b) => b
           ..factory = true
           ..name = "fromSnapshot"
@@ -239,7 +224,7 @@ class DartCodeGenerator implements CodeGenerator {
         ..type = firestoreReference
         ..name = "_firestore"
         ..assignment = Code.scope(
-            (allocate) => "${allocate(firestoreReference)}.instance")),
+                (allocate) => "${allocate(firestoreReference)}.instance")),
       Method.returnsVoid((b) => b
         ..name = "setFirestoreInstance"
         ..requiredParameters.add(Parameter((b) => b
@@ -267,7 +252,7 @@ class DartCodeGenerator implements CodeGenerator {
           ..symbol = "Map"
           ..types.addAll([refer("Type"), refer("TypeConverter")]))
         ..name = "_dartTypeConverterMap"
-        // TODO: Converter for Geopoint
+      // TODO: Converter for Geopoint
         ..assignment = Code.scope((allocate) => """
           {
             DateTime: _dateTimeConverter,
@@ -291,22 +276,10 @@ class DartCodeGenerator implements CodeGenerator {
   Iterable<GeneratedCodeFile> generate(ast.Schema schema) {
     final classes = codeForCollection(schema.collections);
     final lib =
-        Library((b) => b..body.addAll(extraCodes())..body.addAll(classes));
+    Library((b) => b..body.addAll(extraCodes())..body.addAll(classes));
     return [
       GeneratedCodeFile(basePath + "firestore_scheme.g.dart",
           _formatter.format("${lib.accept(DartEmitter.scoped())}"))
     ];
-  }
-}
-
-class SwiftCodeGenerator implements CodeGenerator {
-  final String basePath;
-
-  SwiftCodeGenerator(this.basePath);
-
-  @override
-  Iterable<GeneratedCodeFile> generate(ast.Schema schema) {
-    // TODO: implement generate
-    return null;
   }
 }
