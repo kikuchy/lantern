@@ -31,6 +31,8 @@ class SwiftCodeGenerator implements CodeGenerator {
         return "Timestamp";
       case "geopoint":
         return "GeoPoint";
+      case "file":
+        return "File";
     }
   }
 
@@ -54,6 +56,8 @@ class SwiftCodeGenerator implements CodeGenerator {
         return "Timestamp()";
       case "geopoint":
         return "GeoPoint(latitude: 0.0, longitude: 0.0)";
+      case "file":
+        return "File()";
     }
   }
 

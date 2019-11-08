@@ -121,6 +121,8 @@ class LanternGrammarDefinition extends GrammarDefinition {
 
   Parser referenceType() => ref(token, "reference");
 
+  Parser fileType() => ref(token, "file");
+
   Parser nullType() => ref(token, "null");
 
   Parser fieldIdentity() => pattern("A-Za-z0-9_").star();
