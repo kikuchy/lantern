@@ -55,6 +55,12 @@ class DartCodeGenerator implements CodeGenerator {
       ..types.add(refer(symbol, url)));
   }
 
+  Reference _referStreamOf(String symbol, [String url]) {
+    return TypeReference((b) => b
+      ..symbol = "Stream"
+      ..types.add(refer(symbol, url)));
+  }
+
   String _documentClassName(ast.Collection collection) =>
       collection.document.name ?? "${collection.name}__nonamedocument__";
 
@@ -129,6 +135,23 @@ class DartCodeGenerator implements CodeGenerator {
           ..body = Code.scope((allocate) => """
             return reference.get().then((s) => ${snapshotName}.fromSnapshot(s));
           """)),
+        Method((b) => b
+          ..returns = _referStreamOf(snapshotName)
+          ..name = "snapshotUpdates"
+          ..optionalParameters.add(Parameter((b) => b
+            ..named = true
+            ..type = refer("bool")
+            ..name = "includeMetadataChanges"
+            ..defaultTo = Code("false")))
+          ..body = Code("""
+            return reference
+                .snapshots(includeMetadataChanges: includeMetadataChanges)
+                .map((s) => ${snapshotName}.fromSnapshot(s));
+          """)),
+        Method((b) => b
+          ..returns = _futureRefer("void")
+          ..name = "delete"
+          ..body = Code("return reference.delete();")),
       ]));
 
     final documentSnapshotClass = Class((b) => b
