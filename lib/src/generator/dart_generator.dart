@@ -374,10 +374,15 @@ class DartCodeGenerator implements CodeGenerator {
           ..optionalParameters
               .addAll(document.fields.map((f) => Parameter((b) => b
                 ..named = true
-                ..annotations.add(refer("required", "package:meta/meta.dart"))
+                ..annotations.addAll([
+                  if (!f.type.nullable)
+                    refer("required", "package:meta/meta.dart"),
+                ])
                 ..name = f.name
                 ..type = _dartType(f.type))))
           ..body = Code("""
+            ${document.fields.where((f) => !f.type.nullable).map((f) => "${_assertNotNull(f.name)};").join("\n")}
+
             final data = <String, Future<dynamic>>{
               ${document.fields.map((f) => "\"${f.name}\": _convertFirestoreStructure(${f.name}, reference.path)").join(",")}
             };
@@ -423,9 +428,15 @@ class DartCodeGenerator implements CodeGenerator {
           ..optionalParameters
               .replace(document.fields.map((f) => Parameter((b) => b
                 ..named = true
-                ..annotations.add(refer("required", "package:meta/meta.dart"))
+                ..annotations.addAll([
+                  if (!f.type.nullable)
+                    refer("required", "package:meta/meta.dart"),
+                ])
                 ..toThis = true
-                ..name = f.name)))),
+                ..name = f.name)))
+          ..initializers.addAll(document.fields
+              .where((f) => !f.type.nullable)
+              .map((f) => _assertNotNull(f.name)))),
         Constructor((b) => b
           ..factory = true
           ..name = "fromSnapshot"
