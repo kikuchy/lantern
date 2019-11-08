@@ -185,6 +185,13 @@ class DartCodeGenerator implements CodeGenerator {
                 })
                 .then((_) => getSnapshot());
           """)),
+        ...document.collections.map((c) => Method((b) => b
+          ..returns = refer("${c.name}Collection")
+          ..type = MethodType.getter
+          ..name = c.name
+          ..body = Code("""
+            return ${c.name}Collection(reference.collection("${c.name}"));
+          """))),
       ]));
 
     final documentSnapshotClass = Class((b) => b
