@@ -15,6 +15,8 @@ class SwiftCodeGenerator implements CodeGenerator {
     switch (firestoreType) {
       case "string":
         return "String";
+      case "url":
+        return "URL";
       case "number":
         return "Double";
       case "integer":
@@ -36,6 +38,8 @@ class SwiftCodeGenerator implements CodeGenerator {
     switch (firestoreType) {
       case "string":
         return "\"\"";
+      case "url":
+        return "URL(\"\")";
       case "number":
         return "0.0";
       case "integer":
@@ -53,25 +57,25 @@ class SwiftCodeGenerator implements CodeGenerator {
     }
   }
 
-  Iterable<GeneratedCodeFile> codeForCollections(Iterable<ast.Collection> collections) {
-    return collections.map((c) => codeForDocument(c.document, c)).expand((i) => i);
+  Iterable<GeneratedCodeFile> codeForCollections(
+      Iterable<ast.Collection> collections) {
+    return collections
+        .map((c) => codeForDocument(c.document, c))
+        .expand((i) => i);
   }
 
-  Iterable<GeneratedCodeFile> codeForDocument(ast.Document document,
-      ast.Collection parent) {
+  Iterable<GeneratedCodeFile> codeForDocument(
+      ast.Document document, ast.Collection parent) {
     return [
       if (document.name != null)
-      GeneratedCodeFile(
-          "$basePath/Firebase+${document.name}.swift",
-          """
+        GeneratedCodeFile("$basePath/Firebase+${document.name}.swift", """
 extension Firebase {
     extension ${document.name} {
         class override var name: String {
             return "${parent.name}"
         }
 
-        ${(document.collections.isNotEmpty) ?
-        """enum CollectionKeys: String {
+        ${(document.collections.isNotEmpty) ? """enum CollectionKeys: String {
             ${document.collections.map((c) => "case ${c.name}").join("\n            ")}
         }""" : ""}
 
@@ -80,8 +84,7 @@ extension Firebase {
         }
     }
 }
-          """
-      ),
+          """),
       ...codeForCollections(document.collections)
     ];
   }

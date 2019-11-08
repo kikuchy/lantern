@@ -11,6 +11,8 @@ class DartCodeGenerator implements CodeGenerator {
     switch (firestoreType) {
       case "string":
         return refer("String");
+      case "url":
+        return refer("Uri");
       case "number":
         return refer("num");
       case "integer":
@@ -144,10 +146,10 @@ class DartCodeGenerator implements CodeGenerator {
           ..name = "create"
           ..optionalParameters
               .addAll(document.fields.map((f) => Parameter((b) => b
-            ..named = true
-            ..annotations.add(refer("required", "package:meta/meta.dart"))
-            ..name = f.name
-            ..type = _dartType(f.type))))
+                ..named = true
+                ..annotations.add(refer("required", "package:meta/meta.dart"))
+                ..name = f.name
+                ..type = _dartType(f.type))))
           ..body = Code("""
             return reference
                 .setData({
@@ -160,9 +162,9 @@ class DartCodeGenerator implements CodeGenerator {
           ..name = "update"
           ..optionalParameters
               .addAll(document.fields.map((f) => Parameter((b) => b
-            ..named = true
-            ..name = f.name
-            ..type = _dartType(f.type))))
+                ..named = true
+                ..name = f.name
+                ..type = _dartType(f.type))))
           ..body = Code("""
             return reference
                 .updateData({
@@ -190,10 +192,10 @@ class DartCodeGenerator implements CodeGenerator {
           ..constant = true
           ..optionalParameters
               .replace(document.fields.map((f) => Parameter((b) => b
-            ..named = true
-            ..annotations.add(refer("required", "package:meta/meta.dart"))
-            ..toThis = true
-            ..name = f.name)))),
+                ..named = true
+                ..annotations.add(refer("required", "package:meta/meta.dart"))
+                ..toThis = true
+                ..name = f.name)))),
         Constructor((b) => b
           ..factory = true
           ..name = "fromSnapshot"
@@ -224,7 +226,7 @@ class DartCodeGenerator implements CodeGenerator {
         ..type = firestoreReference
         ..name = "_firestore"
         ..assignment = Code.scope(
-                (allocate) => "${allocate(firestoreReference)}.instance")),
+            (allocate) => "${allocate(firestoreReference)}.instance")),
       Method.returnsVoid((b) => b
         ..name = "setFirestoreInstance"
         ..requiredParameters.add(Parameter((b) => b
@@ -247,15 +249,23 @@ class DartCodeGenerator implements CodeGenerator {
           ..type = refer("dynamic")
           ..name = "v"))
         ..body = Code("return v?.toDate();")),
+      Method((b) => b
+        ..returns = refer("Uri")
+        ..name = "_urlConverter"
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"))
+        ..body = Code("return (v != null) ? Uri.parse(v) : null;")),
       Field((b) => b
         ..type = TypeReference((b) => b
           ..symbol = "Map"
           ..types.addAll([refer("Type"), refer("TypeConverter")]))
         ..name = "_dartTypeConverterMap"
-      // TODO: Converter for Geopoint
+        // TODO: Converter for Geopoint
         ..assignment = Code.scope((allocate) => """
           {
             DateTime: _dateTimeConverter,
+            Uri: _urlConverter,
             // TODO: Converter for Geopoint
           }
         """)),
@@ -276,7 +286,7 @@ class DartCodeGenerator implements CodeGenerator {
   Iterable<GeneratedCodeFile> generate(ast.Schema schema) {
     final classes = codeForCollection(schema.collections);
     final lib =
-    Library((b) => b..body.addAll(extraCodes())..body.addAll(classes));
+        Library((b) => b..body.addAll(extraCodes())..body.addAll(classes));
     return [
       GeneratedCodeFile(basePath + "firestore_scheme.g.dart",
           _formatter.format("${lib.accept(DartEmitter.scoped())}"))

@@ -90,6 +90,7 @@ class LanternGrammarDefinition extends GrammarDefinition {
 
   Parser type() =>
       ref(stringType) |
+      ref(urlType) |
       ref(numberType) |
       ref(integerType) |
       ref(booleanType) |
@@ -101,6 +102,8 @@ class LanternGrammarDefinition extends GrammarDefinition {
       ref(nullType);
 
   Parser stringType() => ref(token, "string");
+
+  Parser urlType() => ref(token, "url");
 
   Parser numberType() => ref(token, "number");
 
