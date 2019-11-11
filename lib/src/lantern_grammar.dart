@@ -116,7 +116,9 @@ class LanternGrammarDefinition extends GrammarDefinition {
 
   Parser mapType() => ref(token, "map");
 
-  Parser arrayType() => ref(token, "array");
+  Parser arrayType() =>
+      ref(token, "array") &
+      ref(typeParameter, arrayContainableTypes()).optional();
 
   Parser timestampType() => ref(token, "timestamp");
 
@@ -127,6 +129,21 @@ class LanternGrammarDefinition extends GrammarDefinition {
   Parser fileType() => ref(token, "file");
 
   Parser nullType() => ref(token, "null");
+
+  Parser typeParameter(Parser typesExpression) =>
+      ref(token, "<") & typesExpression & ref(token, ">");
+
+  Parser arrayContainableTypes() =>
+      ref(stringType) |
+      ref(urlType) |
+      ref(numberType) |
+      ref(integerType) |
+      ref(booleanType) |
+      ref(mapType) |
+      ref(timestampType) |
+      ref(geopointType) |
+      ref(referenceType) |
+      ref(nullType);
 
   Parser fieldIdentity() => pattern("A-Za-z0-9_").star();
 }

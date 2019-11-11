@@ -32,14 +32,15 @@ void main() {
                   DocumentParameter("saveCreationDate", true),
                   DocumentParameter("saveModifiedDate", true)
                 ], [
-                  Field(FieldType("string", false), "hoge"),
-                  Field(FieldType("number", false), "fuga"),
+                  Field(FieldType(DeclaredType.string, false), "hoge"),
+                  Field(FieldType(DeclaredType.number, false), "fuga"),
                 ], [
                   Collection(
                       "talks",
                       [],
-                      Document(null, [],
-                          [Field(FieldType("boolean", false), "isHoge")], []))
+                      Document(null, [], [
+                        Field(FieldType(DeclaredType.boolean, false), "isHoge")
+                      ], []))
                 ]))
           ]),
           """
@@ -61,13 +62,31 @@ void main() {
             Collection(
                 "hoge",
                 [],
-                Document(
-                    null, [], [Field(FieldType("string", true), "hoge")], []))
+                Document(null, [],
+                    [Field(FieldType(DeclaredType.string, true), "hoge")], []))
           ]),
           """
         collection hoge {
           document {
             string? hoge
+          }
+        }
+      """),
+      _SuccessCase(
+          "array type field",
+          Schema([
+            Collection(
+                "hoge",
+                [],
+                Document(null, [], [
+                  Field(FieldType(TypedType.array(DeclaredType.string), false),
+                      "hoge")
+                ], []))
+          ]),
+          """
+        collection hoge {
+          document {
+            array<string> hoge
           }
         }
       """),

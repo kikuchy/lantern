@@ -74,5 +74,46 @@ class LanternParserDefinition extends LanternGrammarDefinition {
   Parser nullableSymbol() => super.nullableSymbol().map((each) => each != null);
 
   @override
+  Parser stringType() => super.stringType().map((_) => DeclaredType.string);
+
+  @override
+  Parser urlType() => super.urlType().map((_) => DeclaredType.url);
+
+  @override
+  Parser numberType() => super.numberType().map((_) => DeclaredType.number);
+
+  @override
+  Parser integerType() => super.integerType().map((_) => DeclaredType.integer);
+
+  @override
+  Parser booleanType() => super.booleanType().map((_) => DeclaredType.boolean);
+
+  @override
+  Parser mapType() => super.mapType().map((_) => DeclaredType.map);
+
+  @override
+  Parser arrayType() => super
+      .arrayType()
+      .map((each) => TypedType.array(each[1] != null ? each[1][1] : null));
+
+  @override
+  Parser timestampType() =>
+      super.timestampType().map((_) => DeclaredType.timestamp);
+
+  @override
+  Parser geopointType() =>
+      super.geopointType().map((_) => DeclaredType.geopoint);
+
+  @override
+  Parser referenceType() =>
+      super.referenceType().map((_) => DeclaredType.reference);
+
+  @override
+  Parser fileType() => super.fileType().map((_) => DeclaredType.file);
+
+  @override
+  Parser nullType() => super.nullType().map((_) => DeclaredType.null$);
+
+  @override
   Parser fieldIdentity() => super.fieldIdentity().map((each) => each.join());
 }

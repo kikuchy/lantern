@@ -141,8 +141,40 @@ class Field {
   int get hashCode => type.hashCode ^ name.hashCode;
 }
 
+class DeclaredType {
+  final String name;
+
+  const DeclaredType(this.name);
+
+  @override
+  String toString() => this.name;
+
+  static const string = DeclaredType("string");
+  static const number = DeclaredType("number");
+  static const integer = DeclaredType("integer");
+  static const url = DeclaredType("url");
+  static const boolean = DeclaredType("boolean");
+  static const timestamp = DeclaredType("timestamp");
+  static const geopoint = DeclaredType("geopoint");
+  static const reference = DeclaredType("reference");
+  static const file = DeclaredType("file");
+  static const map = DeclaredType("map");
+  static const null$ = DeclaredType("null");
+}
+
+class TypedType extends DeclaredType {
+  final DeclaredType typeParameter;
+
+  const TypedType(String name, this.typeParameter): super(name);
+
+  @override
+  String toString() => "${super.name}<$typeParameter>";
+
+  factory TypedType.array(DeclaredType t) => TypedType("array", t);
+}
+
 class FieldType {
-  String name;
+  DeclaredType name;
   bool nullable;
 
   FieldType(this.name, this.nullable);
