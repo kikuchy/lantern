@@ -7,32 +7,44 @@ class DartCodeGenerator implements CodeGenerator {
 
   DartCodeGenerator(this.basePath);
 
-  Reference _dartType(ast.FieldType firestoreType) {
-    switch (firestoreType.name) {
-      case "string":
+  Reference _dartTypeReference(ast.DeclaredType type) {
+    switch (type) {
+      case ast.DeclaredType.string:
         return refer("String");
-      case "url":
+      case ast.DeclaredType.url:
         return refer("Uri");
-      case "number":
+      case ast.DeclaredType.number:
         return refer("num");
-      case "integer":
+      case ast.DeclaredType.integer:
         return refer("int");
-      case "boolean":
+      case ast.DeclaredType.boolean:
         return refer("bool");
-      case "map":
+      case ast.DeclaredType.map:
         return refer("Map<String, dynamic>");
-      case "array":
-        return refer("List<dynamic>");
-      case "timestamp":
+      case ast.DeclaredType.timestamp:
         return refer("DateTime");
-      case "geopoint":
+      case ast.DeclaredType.geopoint:
         return TypeReference(((b) => b
           ..symbol = "Point"
           ..url = "dart:math"
           ..types.add(refer("double"))));
-      case "file":
+      case ast.DeclaredType.file:
         return refer("FileReference");
+      default:
+        if (type is ast.TypedType && type.name == "array") {
+          return TypeReference((b) => b
+            ..symbol = "List"
+            ..types.addAll([
+              if (type.typeParameter != null)
+                _dartTypeReference(type.typeParameter),
+            ]));
+        }
     }
+  }
+
+  Reference _dartFieldTypeDeclaration(ast.FieldType firestoreType) {
+    // note: Add nullable type support when Dartlang supports NNDB.
+    return _dartTypeReference(firestoreType.name);
   }
 
   Reference _referFirestore(String symbol) =>
@@ -379,7 +391,7 @@ class DartCodeGenerator implements CodeGenerator {
                     refer("required", "package:meta/meta.dart"),
                 ])
                 ..name = f.name
-                ..type = _dartType(f.type))))
+                ..type = _dartFieldTypeDeclaration(f.type))))
           ..body = Code("""
             ${document.fields.where((f) => !f.type.nullable).map((f) => "${_assertNotNull(f.name)};").join("\n")}
 
@@ -399,7 +411,7 @@ class DartCodeGenerator implements CodeGenerator {
               .addAll(document.fields.map((f) => Parameter((b) => b
                 ..named = true
                 ..name = f.name
-                ..type = _dartType(f.type))))
+                ..type = _dartFieldTypeDeclaration(f.type))))
           ..body = Code("""
             return reference
                 .updateData({
@@ -420,7 +432,7 @@ class DartCodeGenerator implements CodeGenerator {
       ..name = snapshotName
       ..fields.replace(document.fields.map((f) => Field((b) => b
         ..modifier = FieldModifier.final$
-        ..type = _dartType(f.type)
+        ..type = _dartFieldTypeDeclaration(f.type)
         ..name = f.name)))
       ..constructors.addAll([
         Constructor((b) => b

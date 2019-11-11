@@ -11,65 +11,71 @@ class SwiftCodeGenerator implements CodeGenerator {
     return codeForCollections(schema.collections);
   }
 
-  String _swiftType(ast.FieldType firestoreType) {
-    String name;
-    switch (firestoreType.name) {
-      case "string":
-        name = "String";
+  String _swiftTypeName(ast.DeclaredType type) {
+    switch (type) {
+      case ast.DeclaredType.string:
+        return "String";
         break;
-      case "url":
-        name = "URL";
+      case ast.DeclaredType.url:
+        return "URL";
         break;
-      case "number":
-        name = "Double";
+      case ast.DeclaredType.number:
+        return "Double";
         break;
-      case "integer":
-        name = "Int";
+      case ast.DeclaredType.integer:
+        return "Int";
         break;
-      case "boolean":
-        name = "Bool";
+      case ast.DeclaredType.boolean:
+        return "Bool";
         break;
-      case "map":
-        name = "[String: Any]";
+      case ast.DeclaredType.map:
+        return "[String: Any]";
         break;
-      case "array":
-        name = "[Any]";
+      case ast.DeclaredType.timestamp:
+        return "Timestamp";
         break;
-      case "timestamp":
-        name = "Timestamp";
+      case ast.DeclaredType.geopoint:
+        return "GeoPoint";
         break;
-      case "geopoint":
-        name = "GeoPoint";
+      case ast.DeclaredType.file:
+        return "File";
         break;
-      case "file":
-        name = "File";
-        break;
+      default:
+        if (type is ast.TypedType && type.name == "array") {
+          return "[${_swiftTypeName(type.typeParameter)}]";
+        }
     }
+  }
+
+  String _swiftFieldTypeDeclaration(ast.FieldType firestoreType) {
+    final name = _swiftTypeName(firestoreType.name);
     return "$name${firestoreType.nullable ? "?" : ""}";
   }
 
-  String _swiftDefaultValue(String firestoreType) {
-    switch (firestoreType) {
-      case "string":
+  String _swiftDefaultValue(ast.DeclaredType type) {
+    switch (type) {
+      case ast.DeclaredType.string:
         return "\"\"";
-      case "url":
+      case ast.DeclaredType.url:
         return "URL(\"\")";
-      case "number":
+      case ast.DeclaredType.number:
         return "0.0";
-      case "integer":
+      case ast.DeclaredType.integer:
         return "0";
-      case "boolean":
+      case ast.DeclaredType.boolean:
         return "false";
-      case "map":
+      case ast.DeclaredType.map:
         return "[:]";
-      case "array":
-        return "[]";
-      case "timestamp":
+      case ast.DeclaredType.timestamp:
         return "Timestamp()";
-      case "geopoint":
+      case ast.DeclaredType.geopoint:
         return "GeoPoint(latitude: 0.0, longitude: 0.0)";
-      case "file":
+      case ast.DeclaredType.file:
         return "File()";
+      default:
+        if (type is ast.TypedType && type.name == "array") {
+          return "[]";
+        }
     }
   }
 
@@ -96,7 +102,7 @@ extension Firebase {
         }""" : ""}
 
         struct Model: Modelable & Codable {
-            ${document.fields.map((f) => "var ${f.name}: ${_swiftType(f.type)}${f.type.nullable ? "" : " = ${_swiftDefaultValue(f.type.name)}"}").join("\n            ")}
+            ${document.fields.map((f) => "var ${f.name}: ${_swiftFieldTypeDeclaration(f.type)}${f.type.nullable ? "" : " = ${_swiftDefaultValue(f.type.name)}"}").join("\n            ")}
         }
     }
 }
