@@ -11,7 +11,9 @@ class InvalidParameterError extends Error {
 
 class ParameterChecker {
   static const acceptableForCollection = {"specificId"};
-  static const acceptableForDocument = {"saveCreatedDate", "saveModifiedDate"};
+  static const saveCreatedDate = "saveCreatedDate";
+  static const saveModifiedDate = "saveModifiedDate";
+  static const acceptableForDocument = {saveCreatedDate, saveModifiedDate};
 
   void _checkCollection(Collection collection) {
     collection.params.forEach((p) {

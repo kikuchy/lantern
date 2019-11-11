@@ -334,6 +334,18 @@ class DartCodeGenerator implements CodeGenerator {
     final name = _documentClassName(parent);
     final snapshotName = "${name}Snapshot";
     final referenceName = "${name}Document";
+    final fieldsForSnapshot = [
+      ...document.fields,
+      if (document.params
+          .any((p) => p.name == ParameterChecker.saveCreatedDate && p.value))
+        ast.Field(
+            ast.FieldType(ast.DeclaredType.timestamp, false), "createdAt"),
+      if (document.params
+          .any((p) => p.name == ParameterChecker.saveModifiedDate && p.value))
+        ast.Field(
+            ast.FieldType(ast.DeclaredType.timestamp, false), "modifiedAt"),
+    ];
+
     final documentRefClass = Class((b) => b
       ..name = referenceName
       ..fields.addAll([
@@ -395,14 +407,26 @@ class DartCodeGenerator implements CodeGenerator {
           ..body = Code("""
             ${document.fields.where((f) => !f.type.nullable).map((f) => "${_assertNotNull(f.name)};").join("\n")}
 
+            final now = DateTime.now();
+            final createdAt = now;
+            final modifiedAt = now;
             final data = <String, Future<dynamic>>{
-              ${document.fields.map((f) => "\"${f.name}\": _convertFirestoreStructure(${f.name}, reference.path)").join(",")}
+              ${[
+            ...document.fields.map((f) =>
+                "\"${f.name}\": _convertFirestoreStructure(${f.name}, reference.path)"),
+            if (document.params.any(
+                (p) => p.name == ParameterChecker.saveCreatedDate && p.value))
+              "\"createdAt\": _convertFirestoreStructure(createdAt, reference.path)",
+            if (document.params.any(
+                (p) => p.name == ParameterChecker.saveModifiedDate && p.value))
+              "\"modifiedAt\": _convertFirestoreStructure(modifiedAt, reference.path)",
+          ].join(",")}
             };
             return Future
                 .wait(data.values)
                 .then((values) => Map.fromIterables(data.keys, values))
                 .then((data) => reference.setData(data))
-                .then((_) => ${snapshotName}(${document.fields.map((f) => "${f.name}: ${f.name}").join(",")}));
+                .then((_) => ${snapshotName}(${fieldsForSnapshot.map((f) => "${f.name}: ${f.name}").join(",")}));
           """)),
         Method((b) => b
           ..returns = _futureRefer(snapshotName)
@@ -415,7 +439,12 @@ class DartCodeGenerator implements CodeGenerator {
           ..body = Code("""
             return reference
                 .updateData({
-                  ${document.fields.map((f) => "\"${f.name}\": ${f.name}").join(",")}
+                  ${[
+            ...document.fields.map((f) => "\"${f.name}\": ${f.name}"),
+            if (document.params.any(
+                (p) => p.name == ParameterChecker.saveModifiedDate && p.value))
+              "\"modifiedAt\": DateTime.now()",
+          ].join(",")}
                 })
                 .then((_) => getSnapshot());
           """)),
@@ -430,23 +459,24 @@ class DartCodeGenerator implements CodeGenerator {
 
     final documentSnapshotClass = Class((b) => b
       ..name = snapshotName
-      ..fields.replace(document.fields.map((f) => Field((b) => b
+      ..fields.replace(fieldsForSnapshot.map((f) => Field((b) => b
         ..modifier = FieldModifier.final$
         ..type = _dartFieldTypeDeclaration(f.type)
         ..name = f.name)))
       ..constructors.addAll([
         Constructor((b) => b
           ..constant = true
-          ..optionalParameters
-              .replace(document.fields.map((f) => Parameter((b) => b
-                ..named = true
-                ..annotations.addAll([
-                  if (!f.type.nullable)
-                    refer("required", "package:meta/meta.dart"),
-                ])
-                ..toThis = true
-                ..name = f.name)))
-          ..initializers.addAll(document.fields
+          ..optionalParameters.addAll([
+            ...fieldsForSnapshot.map((f) => Parameter((b) => b
+              ..named = true
+              ..annotations.addAll([
+                if (!f.type.nullable)
+                  refer("required", "package:meta/meta.dart"),
+              ])
+              ..toThis = true
+              ..name = f.name)),
+          ])
+          ..initializers.addAll(fieldsForSnapshot
               .where((f) => !f.type.nullable)
               .map((f) => _assertNotNull(f.name)))),
         Constructor((b) => b
@@ -458,7 +488,7 @@ class DartCodeGenerator implements CodeGenerator {
           ..body = Code("""
             if (documentSnapshot.exists) {
               return ${snapshotName}(
-                ${document.fields.map((f) => "${f.name}: _convertDartType(documentSnapshot[\"${f.name}\"])").join(",\n")}
+                ${fieldsForSnapshot.map((f) => "${f.name}: _convertDartType(documentSnapshot[\"${f.name}\"])").join(",\n")}
               );
             } else {
               return null;
