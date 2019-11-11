@@ -1,8 +1,8 @@
 name: lantern
-description: A sample command-line application.
-# version: 1.0.0
-# homepage: https://www.example.com
-# author: kikuchy <kikuchy.h@gmail.com>
+description: Cloud Firestore's data structure definition language and code generator. Lantern lights bright future of your project.
+version: 1.0.0
+homepage: https://github.com/kikuchy/lantern
+author: kikuchy <kikuchy.h@gmail.com>
 
 environment:
   sdk: '>=2.5.0 <3.0.0'
