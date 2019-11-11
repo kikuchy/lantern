@@ -316,6 +316,18 @@ class DartCodeGenerator implements CodeGenerator {
           ])
           ..methods.addAll([
             Method((b) => b
+              ..returns = refer("String")
+              ..type = MethodType.getter
+              ..name = "id"
+              ..lambda = true
+              ..body = Code("reference.id")),
+            Method((b) => b
+              ..returns = refer("String")
+              ..type = MethodType.getter
+              ..name = "path"
+              ..lambda = true
+              ..body = Code("reference.path")),
+            Method((b) => b
               ..returns = refer("${_documentClassName(collection)}Document")
               ..name = "documentById"
               ..requiredParameters.add(Parameter((b) => b
@@ -323,6 +335,13 @@ class DartCodeGenerator implements CodeGenerator {
                 ..name = "id"))
               ..body = Code(
                   "return ${_documentClassName(collection)}Document(reference.document(id));")),
+            if (collection.params
+                .any((p) => p.name == ParameterChecker.autoId && p.value))
+              Method((b) => b
+                ..returns = refer("${_documentClassName(collection)}Document")
+                ..name = "newDocument"
+                ..body = Code(
+                    "return ${_documentClassName(collection)}Document(reference.document());")),
           ])),
         ...codeForDocument(collection.document, collection)
       ];
@@ -369,6 +388,24 @@ class DartCodeGenerator implements CodeGenerator {
           ..body = Code("return ${referenceName}(_firestore.document(path));")),
       ])
       ..methods.addAll([
+        Method((b) => b
+          ..returns = refer("String")
+          ..type = MethodType.getter
+          ..name = "documentId"
+          ..lambda = true
+          ..body = Code("reference.documentId")),
+        Method((b) => b
+          ..returns = refer("String")
+          ..type = MethodType.getter
+          ..name = "path"
+          ..lambda = true
+          ..body = Code("reference.path")),
+        Method((b) => b
+          ..returns = refer("${parent.name}Collection")
+          ..type = MethodType.getter
+          ..name = "parent"
+          ..lambda = true
+          ..body = Code("${parent.name}Collection(reference.parent())")),
         Method((b) => b
           ..returns = _futureRefer(snapshotName)
           ..name = "getSnapshot"

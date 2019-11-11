@@ -10,7 +10,8 @@ class InvalidParameterError extends Error {
 }
 
 class ParameterChecker {
-  static const acceptableForCollection = {"specificId"};
+  static const autoId = "autoId";
+  static const acceptableForCollection = {autoId};
   static const saveCreatedDate = "saveCreatedDate";
   static const saveModifiedDate = "saveModifiedDate";
   static const acceptableForDocument = {saveCreatedDate, saveModifiedDate};
