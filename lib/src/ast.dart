@@ -165,7 +165,7 @@ class DeclaredType {
 class TypedType extends DeclaredType {
   final DeclaredType typeParameter;
 
-  const TypedType(String name, this.typeParameter): super(name);
+  const TypedType(String name, this.typeParameter) : super(name);
 
   @override
   String toString() => "${super.name}<$typeParameter>";
@@ -173,15 +173,28 @@ class TypedType extends DeclaredType {
   factory TypedType.array(DeclaredType t) => TypedType("array", t);
 }
 
+class HasValueType extends DeclaredType {
+  final String identity;
+  final List<String> values;
+
+  const HasValueType(String name, this.identity, this.values) : super(name);
+
+  @override
+  String toString() => "${super.name} $identity \{${values.join(", ")}\}";
+
+  factory HasValueType.enum$(String identity, List<String> values) =>
+      HasValueType("enum", identity, values);
+}
+
 class FieldType {
-  DeclaredType name;
+  DeclaredType type;
   bool nullable;
 
-  FieldType(this.name, this.nullable);
+  FieldType(this.type, this.nullable);
 
   @override
   String toString() {
-    return "$name${nullable ? "?" : ""}";
+    return "$type${nullable ? "?" : ""}";
   }
 
   @override
@@ -189,9 +202,9 @@ class FieldType {
       identical(this, other) ||
       other is FieldType &&
           runtimeType == other.runtimeType &&
-          name == other.name &&
+          type == other.type &&
           nullable == other.nullable;
 
   @override
-  int get hashCode => name.hashCode ^ nullable.hashCode;
+  int get hashCode => type.hashCode ^ nullable.hashCode;
 }

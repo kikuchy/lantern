@@ -112,7 +112,16 @@ class LanternParserDefinition extends LanternGrammarDefinition {
   Parser fileType() => super.fileType().map((_) => DeclaredType.file);
 
   @override
+  Parser enumType() => super
+      .enumType()
+      .map((each) => HasValueType.enum$(each[1], each[3].cast<String>()));
+
+  @override
   Parser nullType() => super.nullType().map((_) => DeclaredType.null$);
+
+  @override
+  Parser typeNameDefinition() =>
+      super.typeNameDefinition().map((each) => each.join());
 
   @override
   Parser fieldIdentity() => super.fieldIdentity().map((each) => each.join());

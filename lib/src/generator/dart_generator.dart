@@ -44,7 +44,7 @@ class DartCodeGenerator implements CodeGenerator {
 
   Reference _dartFieldTypeDeclaration(ast.FieldType firestoreType) {
     // note: Add nullable type support when Dartlang supports NNDB.
-    return _dartTypeReference(firestoreType.name);
+    return _dartTypeReference(firestoreType.type);
   }
 
   Reference _referFirestore(String symbol) =>

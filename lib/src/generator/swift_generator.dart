@@ -48,7 +48,7 @@ class SwiftCodeGenerator implements CodeGenerator {
   }
 
   String _swiftFieldTypeDeclaration(ast.FieldType firestoreType) {
-    final name = _swiftTypeName(firestoreType.name);
+    final name = _swiftTypeName(firestoreType.type);
     return "$name${firestoreType.nullable ? "?" : ""}";
   }
 
@@ -102,7 +102,7 @@ extension Firebase {
         }""" : ""}
 
         struct Model: Modelable & Codable {
-            ${document.fields.map((f) => "var ${f.name}: ${_swiftFieldTypeDeclaration(f.type)}${f.type.nullable ? "" : " = ${_swiftDefaultValue(f.type.name)}"}").join("\n            ")}
+            ${document.fields.map((f) => "var ${f.name}: ${_swiftFieldTypeDeclaration(f.type)}${f.type.nullable ? "" : " = ${_swiftDefaultValue(f.type.type)}"}").join("\n            ")}
         }
     }
 }

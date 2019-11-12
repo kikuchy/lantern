@@ -90,6 +90,27 @@ void main() {
           }
         }
       """),
+      _SuccessCase(
+          "enum type field",
+          Schema([
+            Collection(
+                "hoge",
+                [],
+                Document(null, [], [
+                  Field(
+                      FieldType(
+                          HasValueType.enum$("Foo", ["foo", "bar", "buz"]),
+                          false),
+                      "hoge")
+                ], []))
+          ]),
+          """
+        collection hoge {
+          document {
+            enum Foo {foo, bar, buz} hoge
+          }
+        }
+      """),
     ];
     cases.forEach((c) {
       test("can parse ${c.description}", () {
@@ -99,10 +120,10 @@ void main() {
       });
     });
 
-    test("fail to parse", () {
-      final result = parser.parse("");
-      expect(result.isSuccess, true);
-      expect(result.message, "matcher");
-    });
+//    test("fail to parse", () {
+//      final result = parser.parse("");
+//      expect(result.isSuccess, true);
+//      expect(result.message, "matcher");
+//    });
   });
 }
