@@ -501,7 +501,7 @@ class DartCodeGenerator implements CodeGenerator {
             Uri: _stringUrlToUriConverter,
             int: _numToIntConverter,
             FileReference: _fileMapToFileReferenceConverter,
-            ${enums.map((e) => "${e.identity}: _stringToEnum${e.identity}Converter").join(",\n")},
+            ${enums.map((e) => "${e.identity}: _stringToEnum${e.identity}Converter").join(",\n")}
             // TODO: Converter for Geopoint
           }
         """)),
@@ -567,7 +567,7 @@ class DartCodeGenerator implements CodeGenerator {
         ..assignment = Code.scope((allocate) => """
           {
             FileReference: _fileReferenceToFileMapConverter,
-            ${enums.map((e) => "${e.identity}: _enum${e.identity}ToStringConverter").join(",\n")},
+            ${enums.map((e) => "${e.identity}: _enum${e.identity}ToStringConverter").join(",\n")}
           }
         """)),
       Method((b) => b
