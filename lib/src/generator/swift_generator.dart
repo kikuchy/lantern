@@ -75,6 +75,8 @@ class SwiftCodeGenerator implements CodeGenerator {
       default:
         if (type is ast.TypedType && type.name == "array") {
           return "[]";
+        } else if (type is ast.HasValueType && type.name == "enum") {
+          return type.identity;
         }
     }
   }
@@ -104,6 +106,38 @@ extension Firebase {
         struct Model: Modelable & Codable {
             ${document.fields.map((f) => "var ${f.name}: ${_swiftFieldTypeDeclaration(f.type)}${f.type.nullable ? "" : " = ${_swiftDefaultValue(f.type.type)}"}").join("\n            ")}
         }
+        
+        ${document.fields
+            .where((f) => f.type.type is ast.HasValueType)
+            .map((f) => f.type.type as ast.HasValueType)
+            .map((t) =>
+        """enum ${t.identity}: CaseIterable, RawRepresentable, Codable {
+                ${t.values.map((v) => "case $v").join("\n                ")}
+                
+                init(rawValue String) {
+                    switch rawValue {
+                    ${t.values.map((v) => "case \"$v\": self = .$v").join("\n                    ")}
+                    }
+                }
+                
+                var rawValue: String {
+                    switch self {
+                    ${t.values.map((v) => "case .$v: self = \"$v\"").join("\n                    ")}
+                    }
+                }
+                
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.singleValueContainer()
+                    let value: ${t.identity} = try ${t.identity}(rawValue: container.decode(RawValue.self))
+                    self = value
+                }
+                
+                func encode(to encoder: Encoder) throws {
+                  var container = encoder.singleValueContainer()
+                  try container.encode(self.rawValue)
+                }
+            }
+            """).join("\n\n")}
     }
 }
           """),
