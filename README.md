@@ -44,7 +44,9 @@ It can provide code for ...
 
 ## Install
 
-TBD.
+```
+$ pub global activate lantern
+```
 
 ## Usage
 
