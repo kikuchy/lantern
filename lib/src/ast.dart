@@ -171,6 +171,7 @@ class TypedType extends DeclaredType {
   String toString() => "${super.name}<$typeParameter>";
 
   factory TypedType.array(DeclaredType t) => TypedType("array", t);
+  factory TypedType.reference(DeclaredType t) => TypedType("reference", t);
 }
 
 class HasValueType extends DeclaredType {

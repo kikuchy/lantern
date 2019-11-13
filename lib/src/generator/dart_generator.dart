@@ -1,11 +1,30 @@
 part of './generator.dart';
 
-class DartCodeGenerator implements CodeGenerator {
-  final _formatter = DartFormatter();
-  @override
-  final String basePath;
+Reference _referFirestore(String symbol) =>
+    refer(symbol, "package:cloud_firestore/cloud_firestore.dart");
 
-  DartCodeGenerator(this.basePath);
+Reference _referStorage(String symbol) =>
+    refer(symbol, "package:firebase_storage/firebase_storage.dart");
+
+Reference _futureRefer(String symbol, [String url]) {
+  return TypeReference((b) => b
+    ..symbol = "Future"
+    ..types.add(refer(symbol, url)));
+}
+
+Reference _referStreamOf(String symbol, [String url]) {
+  return TypeReference((b) => b
+    ..symbol = "Stream"
+    ..types.add(refer(symbol, url)));
+}
+
+Code _assertNotNull(String symbol) => Code("assert(${symbol} != null)");
+
+class _AstTraverser {
+  final List<Spec> generatedCodes = [];
+  final Set<ast.Document> documents = {};
+  final Set<ast.Collection> collections = {};
+  final Set<ast.HasValueType> enums = {};
 
   Reference _dartTypeReference(ast.DeclaredType type) {
     switch (type) {
@@ -38,6 +57,8 @@ class DartCodeGenerator implements CodeGenerator {
               if (type.typeParameter != null)
                 _dartTypeReference(type.typeParameter),
             ]));
+        } else if (type is ast.HasValueType && type.name == "enum") {
+          return refer(type.identity);
         }
     }
   }
@@ -47,250 +68,11 @@ class DartCodeGenerator implements CodeGenerator {
     return _dartTypeReference(firestoreType.type);
   }
 
-  Reference _referFirestore(String symbol) =>
-      refer(symbol, "package:cloud_firestore/cloud_firestore.dart");
-
-  Reference _referStorage(String symbol) =>
-      refer(symbol, "package:firebase_storage/firebase_storage.dart");
-
-  Reference _futureRefer(String symbol, [String url]) {
-    return TypeReference((b) => b
-      ..symbol = "Future"
-      ..types.add(refer(symbol, url)));
-  }
-
-  Reference _referStreamOf(String symbol, [String url]) {
-    return TypeReference((b) => b
-      ..symbol = "Stream"
-      ..types.add(refer(symbol, url)));
-  }
-
-  Code _assertNotNull(String symbol) => Code("assert(${symbol} != null)");
-
   String _documentClassName(ast.Collection collection) =>
       collection.document.name ?? "${collection.name}__nonamedocument__";
 
-  Iterable<Spec> extraCodes() {
-    final firestoreReference = _referFirestore("Firestore");
-    final storageReference = _referStorage("FirebaseStorage");
-    return [
-      Field((b) => b
-        ..type = firestoreReference
-        ..name = "_firestore"
-        ..assignment = Code.scope(
-            (allocate) => "${allocate(firestoreReference)}.instance")),
-      Method.returnsVoid((b) => b
-        ..name = "setFirestoreInstance"
-        ..requiredParameters.add(Parameter((b) => b
-          ..type = firestoreReference
-          ..name = "instance"))
-        ..body = Code("_firestore = instance;")),
-      Field((b) => b
-        ..type = storageReference
-        ..name = "_storage"
-        ..assignment =
-            Code.scope((allocate) => "${allocate(storageReference)}.instance")),
-      Method.returnsVoid((b) => b
-        ..name = "setFirebaseStorageInstance"
-        ..requiredParameters.add(Parameter((b) => b
-          ..type = storageReference
-          ..name = "instance"))
-        ..body = Code("_storage = instance;")),
-      Code("\ntypedef DartTypeConverter<T, U> = T Function(U);\n"),
-      Method((b) => b
-        ..returns = refer("T")
-        ..name = "_idConverter"
-        ..types.add(refer("T"))
-        ..requiredParameters.add(Parameter((b) => b
-          ..type = refer(("T"))
-          ..name = "v"))
-        ..body = Code("return v;")),
-      Method((b) => b
-        ..returns = refer("DateTime")
-        ..name = "_timestampToDateTimeConverter"
-        ..requiredParameters.add(Parameter((b) => b
-          ..type = refer("dynamic")
-          ..name = "v"))
-        ..body = Code("return v?.toDate();")),
-      Method((b) => b
-        ..returns = refer("Uri")
-        ..name = "_stringUrlToUriConverter"
-        ..requiredParameters.add(Parameter((b) => b
-          ..type = refer("dynamic")
-          ..name = "v"))
-        ..body = Code("return (v != null) ? Uri.parse(v) : null;")),
-      Method((b) => b
-        ..returns = refer("int")
-        ..name = "_numToIntConverter"
-        ..requiredParameters.add(Parameter((b) => b
-          ..type = refer("dynamic")
-          ..name = "v"))
-        ..body = Code("return v?.toInt();")),
-      Method((b) => b
-        ..returns = refer("FileReference")
-        ..name = "_fileMapToFileReferenceConverter"
-        ..requiredParameters.add(Parameter((b) => b
-          ..type = refer("dynamic")
-          ..name = "v"))
-        ..body = Code("return (v != null) ? _RemoteFile._(v) : null;")),
-      Field((b) => b
-        ..type = TypeReference((b) => b
-          ..symbol = "Map"
-          ..types.addAll([refer("Type"), refer("DartTypeConverter")]))
-        ..name = "_dartTypeConverterMap"
-        // TODO: Converter for Geopoint
-        ..assignment = Code.scope((allocate) => """
-          {
-            DateTime: _timestampToDateTimeConverter,
-            Uri: _stringUrlToUriConverter,
-            int: _numToIntConverter,
-            FileReference: _fileMapToFileReferenceConverter,
-            // TODO: Converter for Geopoint
-          }
-        """)),
-      Method((b) => b
-        ..returns = refer("T")
-        ..name = "_convertDartType"
-        ..types.add(refer("T"))
-        ..requiredParameters.add(Parameter((b) => b
-          ..type = refer("dynamic")
-          ..name = "v"))
-        ..body = Code("""
-            return (_dartTypeConverterMap[T] ?? _idConverter).call(v);
-        """)),
-      Code(
-          "\ntypedef FirestoreStructureConverter<T, U> = Future<T> Function(U, String);\n"),
-      Method((b) => b
-        ..returns = _futureRefer("T")
-        ..name = "_delayedIdConverter"
-        ..types.add(refer("T"))
-        ..requiredParameters.addAll([
-          Parameter((b) => b
-            ..type = refer(("T"))
-            ..name = "v"),
-          Parameter((b) => b
-            ..type = refer("String")
-            ..name = "documentPath"),
-        ])
-        ..modifier = MethodModifier.async
-        ..body = Code("return v;")),
-      Method((b) => b
-        ..returns = _futureRefer("Map<String, dynamic>")
-        ..name = "_fileReferenceToFileMapConverter"
-        ..requiredParameters.addAll([
-          Parameter((b) => b
-            ..type = refer("dynamic")
-            ..name = "v"),
-          Parameter((b) => b
-            ..type = refer("String")
-            ..name = "documentPath"),
-        ])
-        ..modifier = MethodModifier.async
-        ..body = Code.scope((allocate) => """
-          if (v is _LocalFile) {
-            final magic = await v._file.openRead(0, 1).first;
-            final mimeType = ${allocate(refer("lookupMimeType", "package:mime/mime.dart"))}(v._file.path, headerBytes: magic);
-            final ref = _storage.path(documentPath);
-            await ref.putFile(v._file, ${allocate(_referStorage("StorageMetadata"))}(contentType: mimeType)).onComplete;
-            return {
-              "additionlData": <String, dynamic>{},
-              "mimeType": mimeType,
-              "path": documentPath,
-              "url": await ref.getDownloadURL(),
-            };
-          } else {
-            return (v as _RemoteFile)._fileStructure;
-          }
-        """)),
-      Field((b) => b
-        ..type = TypeReference((b) => b
-          ..symbol = "Map"
-          ..types.addAll([refer("Type"), refer("FirestoreStructureConverter")]))
-        ..name = "_firestoreStructureConverterMap"
-        ..assignment = Code.scope((allocate) => """
-          {
-            FileReference: _fileReferenceToFileMapConverter,
-          }
-        """)),
-      Method((b) => b
-        ..returns = _futureRefer("dynamic")
-        ..name = "_convertFirestoreStructure"
-        ..types.add(refer("T"))
-        ..requiredParameters.addAll([
-          Parameter((b) => b
-            ..type = refer("T")
-            ..name = "v"),
-          Parameter((b) => b
-            ..type = refer("String")
-            ..name = "documentPath"),
-        ])
-        ..body = Code("""
-            return (_firestoreStructureConverterMap[T] ?? _delayedIdConverter).call(v, documentPath);
-        """)),
-      Class((b) => b
-        ..abstract = true
-        ..name = "FileReference"
-        ..constructors.addAll([
-          Constructor((b) => b
-            ..factory = true
-            ..name = "local"
-            ..requiredParameters.add(Parameter((b) => b
-              ..type = refer("File", "dart:io")
-              ..name = "file"))
-            ..body = Code("return _LocalFile._(file);")),
-        ])
-        ..methods.addAll([
-          Method((b) => b
-            ..returns = refer("Uri")
-            ..type = MethodType.getter
-            ..name = "uri"),
-        ])),
-      Class((b) => b
-        ..name = "_LocalFile"
-        ..implements.add(refer("FileReference"))
-        ..fields.add(Field((b) => b
-          ..modifier = FieldModifier.final$
-          ..type = refer("File", "dart:io")
-          ..name = "_file"))
-        ..constructors.add(Constructor((b) => b
-          ..name = "_"
-          ..requiredParameters.add(Parameter((b) => b
-            ..toThis = true
-            ..name = "_file"))
-          ..initializers.add(_assertNotNull("_file"))))
-        ..methods.addAll([
-          Method((b) => b
-            ..annotations.add(refer("override"))
-            ..returns = refer("Uri")
-            ..type = MethodType.getter
-            ..name = "uri"
-            ..body = Code("return _file.uri;")),
-        ])),
-      Class((b) => b
-        ..name = "_RemoteFile"
-        ..implements.add(refer("FileReference"))
-        ..fields.add(Field((b) => b
-          ..modifier = FieldModifier.final$
-          ..type = refer("Map<String, dynamic>")
-          ..name = "_fileStructure"))
-        ..constructors.add(Constructor((b) => b
-          ..name = "_"
-          ..requiredParameters.add(Parameter((b) => b
-            ..toThis = true
-            ..name = "_fileStructure"))
-          ..initializers.add(_assertNotNull("_fileStructure"))))
-        ..methods.addAll([
-          Method((b) => b
-            ..annotations.add(refer("override"))
-            ..returns = refer("Uri")
-            ..type = MethodType.getter
-            ..name = "uri"
-            ..body = Code("return Uri.parse(_fileStructure[\"url\"]);")),
-        ])),
-    ];
-  }
-
-  Iterable<Class> codeForCollection(List<ast.Collection> collections) {
+  Iterable<Spec> codeForCollections(List<ast.Collection> collections) {
+    this.collections.addAll(collections);
     return collections.map((collection) {
       final name = "${collection.name}Collection";
       return [
@@ -348,8 +130,9 @@ class DartCodeGenerator implements CodeGenerator {
     }).expand((c) => c);
   }
 
-  Iterable<Class> codeForDocument(
-      ast.Document document, ast.Collection parent) {
+  Iterable<Spec> codeForDocument(ast.Document document, ast.Collection parent) {
+    this.documents.add(document);
+
     final name = _documentClassName(parent);
     final snapshotName = "${name}Snapshot";
     final referenceName = "${name}Document";
@@ -532,18 +315,347 @@ class DartCodeGenerator implements CodeGenerator {
             }
           """)),
       ]));
+
+    final enumClasses = fieldsForSnapshot
+        .where((f) => f.type.type is ast.HasValueType)
+        .map((f) => f.type.type as ast.HasValueType)
+        .map((t) {
+          this.enums.add(t);
+          return t;
+        })
+        .map((t) => [
+              Class((b) => b
+                ..name = t.identity
+                ..fields.addAll([
+                  Field((b) => b
+                    ..modifier = FieldModifier.final$
+                    ..type = refer("String")
+                    ..name = "value"),
+                  Field((b) => b
+                    ..modifier = FieldModifier.final$
+                    ..type = refer("int")
+                    ..name = "index")
+                ])
+                ..constructors.addAll([
+                  Constructor((b) => b
+                    ..constant = true
+                    ..name = "_"
+                    ..requiredParameters.addAll([
+                      Parameter((b) => b
+                        ..toThis = true
+                        ..name = "index"),
+                      Parameter((b) => b
+                        ..toThis = true
+                        ..name = "value"),
+                    ])),
+                  Constructor((b) => b
+                    ..factory = true
+                    ..name = "fromValue"
+                    ..requiredParameters.add(Parameter((b) => b
+                      ..type = refer(("String"))
+                      ..name = "value"))
+                    ..lambda = true
+                    ..body =
+                        Code("values.where((v) => v.value == value).first"))
+                ])
+                ..methods.addAll([
+                  Method((b) => b
+                    ..annotations.add(refer("override"))
+                    ..returns = refer("String")
+                    ..name = "toString"
+                    ..lambda = true
+                    ..body = Code("\"${t.identity}.\$value\"")),
+                ])
+                ..fields.addAll(t.values
+                    .asMap()
+                    .map((i, v) => MapEntry(
+                        i,
+                        Field((b) => b
+                          ..static = true
+                          ..modifier = FieldModifier.constant
+                          ..name = v
+                          ..assignment = Code("${t.identity}._($i, \"$v\")"))))
+                    .values)
+                ..fields.add(Field((b) => b
+                  ..static = true
+                  ..modifier = FieldModifier.constant
+                  ..name = "values"
+                  ..assignment = Code("[${t.values.join((", "))}]")))),
+              Method((b) => b
+                ..returns = refer(t.identity)
+                ..name = "_stringToEnum${t.identity}Converter"
+                ..requiredParameters.add(Parameter((b) => b
+                  ..type = refer("dynamic")
+                  ..name = "v"))
+                ..lambda = true
+                ..body = Code("${t.identity}.fromValue(v)")),
+              Method((b) => b
+                ..returns = _futureRefer("String")
+                ..name = "_enum${t.identity}ToStringConverter"
+                ..requiredParameters.addAll([
+                  Parameter((b) => b
+                    ..type = refer("dynamic")
+                    ..name = "v"),
+                  Parameter((b) => b
+                    ..type = refer("String")
+                    ..name = "_")
+                ])
+                ..modifier = MethodModifier.async
+                ..body = Code("return v.value;")),
+            ])
+        .expand((i) => i);
+
     return [
       documentRefClass,
       documentSnapshotClass,
-      ...codeForCollection(document.collections),
+      ...enumClasses,
+      ...codeForCollections(document.collections),
+    ];
+  }
+
+  void traverse(ast.Schema schema) {
+    final classes = codeForCollections(schema.collections);
+    generatedCodes.addAll(classes);
+  }
+}
+
+class DartCodeGenerator implements CodeGenerator {
+  final _formatter = DartFormatter();
+  @override
+  final String basePath;
+
+  DartCodeGenerator(this.basePath);
+
+  Iterable<Spec> extraCodes(Set<ast.HasValueType> enums) {
+    final firestoreReference = _referFirestore("Firestore");
+    final storageReference = _referStorage("FirebaseStorage");
+    return [
+      Field((b) => b
+        ..type = firestoreReference
+        ..name = "_firestore"
+        ..assignment = Code.scope(
+            (allocate) => "${allocate(firestoreReference)}.instance")),
+      Method.returnsVoid((b) => b
+        ..name = "setFirestoreInstance"
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = firestoreReference
+          ..name = "instance"))
+        ..body = Code("_firestore = instance;")),
+      Field((b) => b
+        ..type = storageReference
+        ..name = "_storage"
+        ..assignment =
+            Code.scope((allocate) => "${allocate(storageReference)}.instance")),
+      Method.returnsVoid((b) => b
+        ..name = "setFirebaseStorageInstance"
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = storageReference
+          ..name = "instance"))
+        ..body = Code("_storage = instance;")),
+      Code("\ntypedef DartTypeConverter<T, U> = T Function(U);\n"),
+      Method((b) => b
+        ..returns = refer("T")
+        ..name = "_idConverter"
+        ..types.add(refer("T"))
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer(("T"))
+          ..name = "v"))
+        ..body = Code("return v;")),
+      Method((b) => b
+        ..returns = refer("DateTime")
+        ..name = "_timestampToDateTimeConverter"
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"))
+        ..body = Code("return v?.toDate();")),
+      Method((b) => b
+        ..returns = refer("Uri")
+        ..name = "_stringUrlToUriConverter"
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"))
+        ..body = Code("return (v != null) ? Uri.parse(v) : null;")),
+      Method((b) => b
+        ..returns = refer("int")
+        ..name = "_numToIntConverter"
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"))
+        ..body = Code("return v?.toInt();")),
+      Method((b) => b
+        ..returns = refer("FileReference")
+        ..name = "_fileMapToFileReferenceConverter"
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"))
+        ..body = Code("return (v != null) ? _RemoteFile._(v) : null;")),
+      Field((b) => b
+        ..type = TypeReference((b) => b
+          ..symbol = "Map"
+          ..types.addAll([refer("Type"), refer("DartTypeConverter")]))
+        ..name = "_dartTypeConverterMap"
+        // TODO: Converter for Geopoint
+        ..assignment = Code.scope((allocate) => """
+          {
+            DateTime: _timestampToDateTimeConverter,
+            Uri: _stringUrlToUriConverter,
+            int: _numToIntConverter,
+            FileReference: _fileMapToFileReferenceConverter,
+            ${enums.map((e) => "${e.identity}: _stringToEnum${e.identity}Converter").join(",\n")},
+            // TODO: Converter for Geopoint
+          }
+        """)),
+      Method((b) => b
+        ..returns = refer("T")
+        ..name = "_convertDartType"
+        ..types.add(refer("T"))
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"))
+        ..body = Code("""
+            return (_dartTypeConverterMap[T] ?? _idConverter).call(v);
+        """)),
+      Code(
+          "\ntypedef FirestoreStructureConverter<T, U> = Future<T> Function(U, String);\n"),
+      Method((b) => b
+        ..returns = _futureRefer("T")
+        ..name = "_delayedIdConverter"
+        ..types.add(refer("T"))
+        ..requiredParameters.addAll([
+          Parameter((b) => b
+            ..type = refer(("T"))
+            ..name = "v"),
+          Parameter((b) => b
+            ..type = refer("String")
+            ..name = "documentPath"),
+        ])
+        ..modifier = MethodModifier.async
+        ..body = Code("return v;")),
+      Method((b) => b
+        ..returns = _futureRefer("Map<String, dynamic>")
+        ..name = "_fileReferenceToFileMapConverter"
+        ..requiredParameters.addAll([
+          Parameter((b) => b
+            ..type = refer("dynamic")
+            ..name = "v"),
+          Parameter((b) => b
+            ..type = refer("String")
+            ..name = "documentPath"),
+        ])
+        ..modifier = MethodModifier.async
+        ..body = Code.scope((allocate) => """
+          if (v is _LocalFile) {
+            final magic = await v._file.openRead(0, 1).first;
+            final mimeType = ${allocate(refer("lookupMimeType", "package:mime/mime.dart"))}(v._file.path, headerBytes: magic);
+            final ref = _storage.path(documentPath);
+            await ref.putFile(v._file, ${allocate(_referStorage("StorageMetadata"))}(contentType: mimeType)).onComplete;
+            return {
+              "additionlData": <String, dynamic>{},
+              "mimeType": mimeType,
+              "path": documentPath,
+              "url": await ref.getDownloadURL(),
+            };
+          } else {
+            return (v as _RemoteFile)._fileStructure;
+          }
+        """)),
+      Field((b) => b
+        ..type = TypeReference((b) => b
+          ..symbol = "Map"
+          ..types.addAll([refer("Type"), refer("FirestoreStructureConverter")]))
+        ..name = "_firestoreStructureConverterMap"
+        ..assignment = Code.scope((allocate) => """
+          {
+            FileReference: _fileReferenceToFileMapConverter,
+            ${enums.map((e) => "${e.identity}: _enum${e.identity}ToStringConverter").join(",\n")},
+          }
+        """)),
+      Method((b) => b
+        ..returns = _futureRefer("dynamic")
+        ..name = "_convertFirestoreStructure"
+        ..types.add(refer("T"))
+        ..requiredParameters.addAll([
+          Parameter((b) => b
+            ..type = refer("T")
+            ..name = "v"),
+          Parameter((b) => b
+            ..type = refer("String")
+            ..name = "documentPath"),
+        ])
+        ..body = Code("""
+            return (_firestoreStructureConverterMap[T] ?? _delayedIdConverter).call(v, documentPath);
+        """)),
+      Class((b) => b
+        ..abstract = true
+        ..name = "FileReference"
+        ..constructors.addAll([
+          Constructor((b) => b
+            ..factory = true
+            ..name = "local"
+            ..requiredParameters.add(Parameter((b) => b
+              ..type = refer("File", "dart:io")
+              ..name = "file"))
+            ..body = Code("return _LocalFile._(file);")),
+        ])
+        ..methods.addAll([
+          Method((b) => b
+            ..returns = refer("Uri")
+            ..type = MethodType.getter
+            ..name = "uri"),
+        ])),
+      Class((b) => b
+        ..name = "_LocalFile"
+        ..implements.add(refer("FileReference"))
+        ..fields.add(Field((b) => b
+          ..modifier = FieldModifier.final$
+          ..type = refer("File", "dart:io")
+          ..name = "_file"))
+        ..constructors.add(Constructor((b) => b
+          ..name = "_"
+          ..requiredParameters.add(Parameter((b) => b
+            ..toThis = true
+            ..name = "_file"))
+          ..initializers.add(_assertNotNull("_file"))))
+        ..methods.addAll([
+          Method((b) => b
+            ..annotations.add(refer("override"))
+            ..returns = refer("Uri")
+            ..type = MethodType.getter
+            ..name = "uri"
+            ..body = Code("return _file.uri;")),
+        ])),
+      Class((b) => b
+        ..name = "_RemoteFile"
+        ..implements.add(refer("FileReference"))
+        ..fields.add(Field((b) => b
+          ..modifier = FieldModifier.final$
+          ..type = refer("Map<String, dynamic>")
+          ..name = "_fileStructure"))
+        ..constructors.add(Constructor((b) => b
+          ..name = "_"
+          ..requiredParameters.add(Parameter((b) => b
+            ..toThis = true
+            ..name = "_fileStructure"))
+          ..initializers.add(_assertNotNull("_fileStructure"))))
+        ..methods.addAll([
+          Method((b) => b
+            ..annotations.add(refer("override"))
+            ..returns = refer("Uri")
+            ..type = MethodType.getter
+            ..name = "uri"
+            ..body = Code("return Uri.parse(_fileStructure[\"url\"]);")),
+        ])),
     ];
   }
 
   @override
   Iterable<GeneratedCodeFile> generate(ast.Schema schema) {
-    final classes = codeForCollection(schema.collections);
-    final lib =
-        Library((b) => b..body.addAll(extraCodes())..body.addAll(classes));
+    final traverser = _AstTraverser();
+    traverser.traverse(schema);
+
+    final classes = traverser.generatedCodes;
+    final lib = Library((b) =>
+        b..body.addAll(extraCodes(traverser.enums))..body.addAll(classes));
     return [
       GeneratedCodeFile(basePath + "firestore_scheme.g.dart",
           _formatter.format("${lib.accept(DartEmitter.scoped())}"))
