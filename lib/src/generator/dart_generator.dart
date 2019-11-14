@@ -308,7 +308,7 @@ class _AstTraverser {
           ..body = Code("""
             if (documentSnapshot.exists) {
               return ${snapshotName}(
-                ${fieldsForSnapshot.map((f) => "${f.name}: _convertDartType(documentSnapshot[\"${f.name}\"])").join(",\n")}
+                ${fieldsForSnapshot.map((f) => "${f.name}: ${(f.type.type.name == "array") ? "_convertDartTypeInList" : "_convertDartType"}(documentSnapshot[\"${f.name}\"])").join(",\n")}
               );
             } else {
               return null;
@@ -488,7 +488,8 @@ class DartCodeGenerator implements CodeGenerator {
         ..requiredParameters.add(Parameter((b) => b
           ..type = refer("dynamic")
           ..name = "v"))
-        ..body = Code("return (v != null) ? _RemoteFile._(v) : null;")),
+        ..body = Code(
+            "return (v != null) ? _RemoteFile._(v.cast<String, dynamic>()) : null;")),
       Field((b) => b
         ..type = TypeReference((b) => b
           ..symbol = "Map"
@@ -514,6 +515,20 @@ class DartCodeGenerator implements CodeGenerator {
           ..name = "v"))
         ..body = Code("""
             return (_dartTypeConverterMap[T] ?? _idConverter).call(v);
+        """)),
+      Method((b) => b
+        ..returns = TypeReference((b) => b
+          ..symbol = "List"
+          ..types.add(refer("T")))
+        ..name = "_convertDartTypeInList"
+        ..types.add(refer("T"))
+        ..requiredParameters.add(Parameter((b) => b
+          ..type = TypeReference((b) => b
+            ..symbol = "List"
+            ..types.add(refer("dynamic")))
+          ..name = "v"))
+        ..body = Code("""
+            return v.map(_dartTypeConverterMap[T] ?? _idConverter).cast<T>().toList();
         """)),
       Code(
           "\ntypedef FirestoreStructureConverter<T, U> = Future<T> Function(U, String);\n"),
@@ -567,6 +582,8 @@ class DartCodeGenerator implements CodeGenerator {
         ..assignment = Code.scope((allocate) => """
           {
             FileReference: _fileReferenceToFileMapConverter,
+            _LocalFile: _fileReferenceToFileMapConverter,
+            _RemoteFile: _fileReferenceToFileMapConverter,
             ${enums.map((e) => "${e.identity}: _enum${e.identity}ToStringConverter").join(",\n")}
           }
         """)),
@@ -583,7 +600,11 @@ class DartCodeGenerator implements CodeGenerator {
             ..name = "documentPath"),
         ])
         ..body = Code("""
-            return (_firestoreStructureConverterMap[T] ?? _delayedIdConverter).call(v, documentPath);
+            if (v is List) {
+              return Future.wait(v.map((e) => _convertFirestoreStructure(e, documentPath)));
+            }
+            final type = (T != dynamic) ? T : v.runtimeType;
+            return (_firestoreStructureConverterMap[type] ?? _delayedIdConverter).call(v, documentPath);
         """)),
       Class((b) => b
         ..abstract = true
