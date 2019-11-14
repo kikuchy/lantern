@@ -174,9 +174,9 @@ class _AstTraverser {
         Method((b) => b
           ..returns = refer("String")
           ..type = MethodType.getter
-          ..name = "documentId"
+          ..name = "documentID"
           ..lambda = true
-          ..body = Code("reference.documentId")),
+          ..body = Code("reference.documentID")),
         Method((b) => b
           ..returns = refer("String")
           ..type = MethodType.getter
@@ -547,7 +547,7 @@ class DartCodeGenerator implements CodeGenerator {
           if (v is _LocalFile) {
             final magic = await v._file.openRead(0, 1).first;
             final mimeType = ${allocate(refer("lookupMimeType", "package:mime/mime.dart"))}(v._file.path, headerBytes: magic);
-            final ref = _storage.path(documentPath);
+            final ref = _storage.ref().child(documentPath);
             await ref.putFile(v._file, ${allocate(_referStorage("StorageMetadata"))}(contentType: mimeType)).onComplete;
             return {
               "additionlData": <String, dynamic>{},
