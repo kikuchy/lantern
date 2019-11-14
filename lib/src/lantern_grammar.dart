@@ -100,6 +100,7 @@ class LanternGrammarDefinition extends GrammarDefinition {
           ref(geopointType) |
           ref(referenceType) |
           ref(enumType) |
+          ref(fileType) |
           ref(nullType)) &
       ref(nullableSymbol).optional();
 
@@ -151,6 +152,7 @@ class LanternGrammarDefinition extends GrammarDefinition {
       ref(timestampType) |
       ref(geopointType) |
       ref(referenceType) |
+      ref(fileType) |
       ref(nullType);
 
   Parser typeNameDefinition() => pattern("A-Za-z0-9_").plus();

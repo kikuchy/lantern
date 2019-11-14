@@ -78,6 +78,28 @@ void main() {
         """,
         success: true,
       ),
+      _TestCase(
+        description: "one collection, one document, file field",
+        source: """
+          collection user {
+            document User {
+              file image
+            }
+          }
+        """,
+        success: true,
+      ),
+      _TestCase(
+        description: "one collection, one document, array of files field",
+        source: """
+          collection user {
+            document User {
+              array<file> images
+            }
+          }
+        """,
+        success: true,
+      ),
     ];
     successes.forEach((c) {
       test(c.description, () {
