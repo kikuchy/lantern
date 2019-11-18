@@ -114,15 +114,9 @@ extension Firebase {
         """enum ${t.identity}: CaseIterable, RawRepresentable, Codable {
                 ${t.values.map((v) => "case $v").join("\n                ")}
                 
-                init(rawValue String) {
-                    switch rawValue {
-                    ${t.values.map((v) => "case \"$v\": self = .$v").join("\n                    ")}
-                    }
-                }
-                
                 var rawValue: String {
                     switch self {
-                    ${t.values.map((v) => "case .$v: self = \"$v\"").join("\n                    ")}
+                    ${t.values.map((v) => "case .$v: return \"$v\"").join("\n                    ")}
                     }
                 }
                 
