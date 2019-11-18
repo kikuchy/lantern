@@ -43,6 +43,8 @@ class SwiftCodeGenerator implements CodeGenerator {
       default:
         if (type is ast.TypedType && type.name == "array") {
           return "[${_swiftTypeName(type.typeParameter)}]";
+        } else if (type is ast.HasValueType && type.name == "enum") {
+          return type.identity;
         }
     }
   }
@@ -76,7 +78,7 @@ class SwiftCodeGenerator implements CodeGenerator {
         if (type is ast.TypedType && type.name == "array") {
           return "[]";
         } else if (type is ast.HasValueType && type.name == "enum") {
-          return type.identity;
+          return ".${type.values.first}";
         }
     }
   }
