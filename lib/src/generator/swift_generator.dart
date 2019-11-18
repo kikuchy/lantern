@@ -112,13 +112,7 @@ extension Firebase {
             .map((f) => f.type.type as ast.HasValueType)
             .map((t) =>
         """enum ${t.identity}: CaseIterable, RawRepresentable, Codable {
-                ${t.values.map((v) => "case $v").join("\n                ")}
-                
-                var rawValue: String {
-                    switch self {
-                    ${t.values.map((v) => "case .$v: return \"$v\"").join("\n                    ")}
-                    }
-                }
+                ${t.values.map((v) => "case $v = \"$v\"").join("\n                ")}
                 
                 init(from decoder: Decoder) throws {
                     let container = try decoder.singleValueContainer()
