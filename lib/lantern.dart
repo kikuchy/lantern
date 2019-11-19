@@ -8,7 +8,9 @@ List<GeneratedCodeFile> parseLantern(String source) {
   final generators = [
     DartCodeGenerator("./"),
     SwiftCodeGenerator("./"),
-    SecurityRulesGenerator("./")
+    // TODO(kikuchy): It's useless because lantern doesn't have expression of access control.
+    //                Reimplement after update language feature.
+//    SecurityRulesGenerator("./")
   ];
   final parsed = parser.parse(source).map((schema) {
     parameterChecker.check(schema);
