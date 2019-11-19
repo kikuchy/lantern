@@ -43,6 +43,8 @@ class SwiftCodeGenerator implements CodeGenerator {
       default:
         if (type is ast.TypedType && type.name == "array") {
           return "[${_swiftTypeName(type.typeParameter)}]";
+        } else if (type is ast.TypedType && type.name == "reference") {
+          return "Document<${type.typeParameter.name}>";
         } else if (type is ast.HasValueType && type.name == "enum") {
           return type.identity;
         }
@@ -77,6 +79,8 @@ class SwiftCodeGenerator implements CodeGenerator {
       default:
         if (type is ast.TypedType && type.name == "array") {
           return "[]";
+        } else if (type is ast.TypedType && type.name == "reference") {
+          return "Document<${type.typeParameter.name}>()";
         } else if (type is ast.HasValueType && type.name == "enum") {
           return ".${type.values.first}";
         }
@@ -109,11 +113,7 @@ extension Firebase {
             ${document.fields.map((f) => "var ${f.name}: ${_swiftFieldTypeDeclaration(f.type)}${f.type.nullable ? "" : " = ${_swiftDefaultValue(f.type.type)}"}").join("\n            ")}
         }
         
-        ${document.fields
-            .where((f) => f.type.type is ast.HasValueType)
-            .map((f) => f.type.type as ast.HasValueType)
-            .map((t) =>
-        """enum ${t.identity}: CaseIterable, RawRepresentable, Codable {
+        ${document.fields.where((f) => f.type.type is ast.HasValueType).map((f) => f.type.type as ast.HasValueType).map((t) => """enum ${t.identity}: CaseIterable, RawRepresentable, Codable {
                 ${t.values.map((v) => "case $v = \"$v\"").join("\n                ")}
                 
                 init(from decoder: Decoder) throws {

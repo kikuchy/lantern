@@ -24,6 +24,7 @@ collection users {
         collection tweets {
             document Tweet {
                 string body
+                reference<Tweet> referring
             }
         }
     }
@@ -81,15 +82,16 @@ And have fields and `collection`s in body.
 ### Fields and Types
 
 ```
-    string          name
-    boolean         isAdult
-    integer         level
-    number          score
-    url             blogUrl
-    array<string>   appeals
-    map             history
-    timestamp       birthday
-    geopoint        lastUsedFrom
+    string                  name
+    boolean                 isAdult
+    integer                 level
+    number                  score
+    url                     blogUrl
+    array<string>           appeals
+    map                     history
+    timestamp               birthday
+    geopoint                lastUsedFrom
+    reference<DocumentName> relatedDocument
 ```
 
 |Lantern Type|Firestore Type|Swift Type|Dart type|
@@ -102,5 +104,6 @@ And have fields and `collection`s in body.
 |`array<T>`|`array`|`[T]`|`List<T>`|
 |`map`|`map`|`[String : Any]`|`Map<String, dynamic>`|
 |`timestamp`|`timestamp`|`Timestamp`|`DateTime`|
-|`geopoint`|`geopoint`|`GeoPoint`|`Point`| 
+|`geopoint`|`geopoint`|`GeoPoint`|`Point`|
+|`reference<T>`|`reference`|`Document<T>`|`TDocument` (Document referencing class will be generated)| 
 

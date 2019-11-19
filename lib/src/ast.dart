@@ -156,7 +156,6 @@ class DeclaredType {
   static const boolean = DeclaredType("boolean");
   static const timestamp = DeclaredType("timestamp");
   static const geopoint = DeclaredType("geopoint");
-  static const reference = DeclaredType("reference");
   static const file = DeclaredType("file");
   static const map = DeclaredType("map");
   static const null$ = DeclaredType("null");
@@ -171,6 +170,7 @@ class TypedType extends DeclaredType {
   String toString() => "${super.name}<$typeParameter>";
 
   factory TypedType.array(DeclaredType t) => TypedType("array", t);
+
   factory TypedType.reference(DeclaredType t) => TypedType("reference", t);
 }
 

@@ -111,6 +111,26 @@ void main() {
           }
         }
       """),
+      _SuccessCase(
+          "reference type field",
+          Schema([
+            Collection(
+                "hoge",
+                [],
+                Document("Hoge", [], [
+                  Field(
+                      FieldType(
+                          TypedType.reference(DeclaredType("Hoge")), false),
+                      "otherHoge")
+                ], []))
+          ]),
+          """
+        collection hoge {
+          document Hoge {
+            reference<Hoge> otherHoge
+          }
+        }
+      """),
     ];
     cases.forEach((c) {
       test("can parse ${c.description}", () {

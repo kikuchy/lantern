@@ -100,6 +100,17 @@ void main() {
         """,
         success: true,
       ),
+      _TestCase(
+        description: "one collection, one document, reference of Document",
+        source: """
+          collection user {
+            document User {
+              reference<User> otherUser
+            }
+          }
+        """,
+        success: true,
+      ),
     ];
     successes.forEach((c) {
       test(c.description, () {

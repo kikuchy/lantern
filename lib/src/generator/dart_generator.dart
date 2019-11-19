@@ -57,6 +57,8 @@ class _AstTraverser {
               if (type.typeParameter != null)
                 _dartTypeReference(type.typeParameter),
             ]));
+        } else if (type is ast.TypedType && type.name == "reference") {
+          return refer("${type.typeParameter.name}Document");
         } else if (type is ast.HasValueType && type.name == "enum") {
           return refer(type.identity);
         }
@@ -277,6 +279,29 @@ class _AstTraverser {
           """))),
       ]));
 
+    final documentRefToRawFunc = Method((b) => b
+      ..returns = _futureRefer(
+          "DocumentReference", "package:cloud_firestore/cloud_firestore.dart")
+      ..name = "_reference${referenceName}ToRawReferenceConverter"
+      ..requiredParameters.addAll([
+        Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"),
+        Parameter((b) => b
+          ..type = refer("String")
+          ..name = "_")
+      ])
+      ..modifier = MethodModifier.async
+      ..body = Code("return v.reference;"));
+
+    final rawToDocumentReference = Method((b) => b
+      ..returns = refer(referenceName)
+      ..name = "_rawReferenceToReference${referenceName}Converter"
+      ..requiredParameters.add(Parameter((b) => b
+        ..type = refer(("dynamic"))
+        ..name = "v"))
+      ..body = Code("return ${referenceName}(v);"));
+
     final documentSnapshotClass = Class((b) => b
       ..name = snapshotName
       ..fields.replace(fieldsForSnapshot.map((f) => Field((b) => b
@@ -406,6 +431,8 @@ class _AstTraverser {
         .expand((i) => i);
 
     return [
+      documentRefToRawFunc,
+      rawToDocumentReference,
       documentRefClass,
       documentSnapshotClass,
       ...enumClasses,
@@ -426,7 +453,8 @@ class DartCodeGenerator implements CodeGenerator {
 
   DartCodeGenerator(this.basePath);
 
-  Iterable<Spec> extraCodes(Set<ast.HasValueType> enums) {
+  Iterable<Spec> extraCodes(
+      Set<ast.HasValueType> enums, Set<ast.Document> documents) {
     final firestoreReference = _referFirestore("Firestore");
     final storageReference = _referStorage("FirebaseStorage");
     return [
@@ -502,7 +530,8 @@ class DartCodeGenerator implements CodeGenerator {
             Uri: _stringUrlToUriConverter,
             int: _numToIntConverter,
             FileReference: _fileMapToFileReferenceConverter,
-            ${enums.map((e) => "${e.identity}: _stringToEnum${e.identity}Converter").join(",\n")}
+            ${enums.map((e) => "${e.identity}: _stringToEnum${e.identity}Converter,").join("\n")}
+            ${documents.where((d) => d.name != null).map((d) => "${d.name}Document: _rawReferenceToReference${d.name}DocumentConverter,").join("\n")}
             // TODO: Converter for Geopoint
           }
         """)),
@@ -584,7 +613,8 @@ class DartCodeGenerator implements CodeGenerator {
             FileReference: _fileReferenceToFileMapConverter,
             _LocalFile: _fileReferenceToFileMapConverter,
             _RemoteFile: _fileReferenceToFileMapConverter,
-            ${enums.map((e) => "${e.identity}: _enum${e.identity}ToStringConverter").join(",\n")}
+            ${enums.map((e) => "${e.identity}: _enum${e.identity}ToStringConverter,").join("\n")}
+            ${documents.where((d) => d.name != null).map((d) => "${d.name}Document: _reference${d.name}DocumentToRawReferenceConverter,").join("\n")}
           }
         """)),
       Method((b) => b
@@ -675,8 +705,9 @@ class DartCodeGenerator implements CodeGenerator {
     traverser.traverse(schema);
 
     final classes = traverser.generatedCodes;
-    final lib = Library((b) =>
-        b..body.addAll(extraCodes(traverser.enums))..body.addAll(classes));
+    final lib = Library((b) => b
+      ..body.addAll(extraCodes(traverser.enums, traverser.documents))
+      ..body.addAll(classes));
     return [
       GeneratedCodeFile(basePath + "firestore_scheme.g.dart",
           _formatter.format("${lib.accept(DartEmitter.scoped())}"))

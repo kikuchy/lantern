@@ -126,7 +126,9 @@ class LanternGrammarDefinition extends GrammarDefinition {
 
   Parser geopointType() => ref(token, "geopoint");
 
-  Parser referenceType() => ref(token, "reference");
+  Parser referenceType() =>
+      ref(token, "reference") &
+      ref(typeParameter, typeNameDefinition()).optional();
 
   Parser fileType() => ref(token, "file");
 

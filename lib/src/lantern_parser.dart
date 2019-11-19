@@ -105,8 +105,8 @@ class LanternParserDefinition extends LanternGrammarDefinition {
       super.geopointType().map((_) => DeclaredType.geopoint);
 
   @override
-  Parser referenceType() =>
-      super.referenceType().map((_) => DeclaredType.reference);
+  Parser referenceType() => super.referenceType().map((each) =>
+      TypedType.reference(DeclaredType(each[1] != null ? each[1][1] : null)));
 
   @override
   Parser fileType() => super.fileType().map((_) => DeclaredType.file);
