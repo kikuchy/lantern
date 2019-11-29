@@ -139,7 +139,6 @@ class _AstTraverser {
     final snapshotName = "${name}Snapshot";
     final referenceName = "${name}Document";
     final fieldsForSnapshot = [
-      ...document.fields,
       if (document.params
           .any((p) => p.name == ParameterChecker.saveCreatedDate && p.value))
         ast.Field(
@@ -149,6 +148,31 @@ class _AstTraverser {
         ast.Field(
             ast.FieldType(ast.DeclaredType.timestamp, false), "modifiedAt"),
     ];
+    final parametersForSnapshot = [
+      ...document.fields,
+      ...fieldsForSnapshot,
+    ];
+
+    final documentSchemaClass = Class((b) => b
+      ..name = name
+      ..fields.replace(document.fields.map((f) => Field((b) => b
+        ..modifier = FieldModifier.final$
+        ..type = _dartFieldTypeDeclaration(f.type)
+        ..name = f.name)))
+      ..constructors.add(Constructor((b) => b
+        ..constant = true
+        ..optionalParameters.addAll([
+          ...document.fields.map((f) => Parameter((b) => b
+            ..named = true
+            ..annotations.addAll([
+              if (!f.type.nullable) refer("required", "package:meta/meta.dart"),
+            ])
+            ..toThis = true
+            ..name = f.name)),
+        ])
+        ..initializers.addAll(document.fields
+            .where((f) => !f.type.nullable)
+            .map((f) => _assertNotNull(f.name))))));
 
     final documentRefClass = Class((b) => b
       ..name = referenceName
@@ -248,7 +272,7 @@ class _AstTraverser {
                 .wait(data.values)
                 .then((values) => Map.fromIterables(data.keys, values))
                 .then((data) => reference.setData(data))
-                .then((_) => ${snapshotName}(${fieldsForSnapshot.map((f) => "${f.name}: ${f.name}").join(",")}));
+                .then((_) => ${snapshotName}(${parametersForSnapshot.map((f) => "${f.name}: ${f.name}").join(",")}));
           """)),
         Method((b) => b
           ..returns = _futureRefer(snapshotName)
@@ -304,6 +328,7 @@ class _AstTraverser {
 
     final documentSnapshotClass = Class((b) => b
       ..name = snapshotName
+      ..extend = refer(name)
       ..fields.replace(fieldsForSnapshot.map((f) => Field((b) => b
         ..modifier = FieldModifier.final$
         ..type = _dartFieldTypeDeclaration(f.type)
@@ -312,6 +337,14 @@ class _AstTraverser {
         Constructor((b) => b
           ..constant = true
           ..optionalParameters.addAll([
+            ...document.fields.map((f) => Parameter((b) => b
+              ..named = true
+              ..annotations.addAll([
+                if (!f.type.nullable)
+                  refer("required", "package:meta/meta.dart"),
+              ])
+              ..type = _dartFieldTypeDeclaration(f.type)
+              ..name = f.name)),
             ...fieldsForSnapshot.map((f) => Parameter((b) => b
               ..named = true
               ..annotations.addAll([
@@ -321,9 +354,13 @@ class _AstTraverser {
               ..toThis = true
               ..name = f.name)),
           ])
-          ..initializers.addAll(fieldsForSnapshot
-              .where((f) => !f.type.nullable)
-              .map((f) => _assertNotNull(f.name)))),
+          ..initializers.addAll([
+            ...fieldsForSnapshot
+                .where((f) => !f.type.nullable)
+                .map((f) => _assertNotNull(f.name)),
+            Code(
+                "super(${document.fields.map((f) => "${f.name}: ${f.name}").join(", ")})"),
+          ])),
         Constructor((b) => b
           ..factory = true
           ..name = "fromSnapshot"
@@ -333,7 +370,7 @@ class _AstTraverser {
           ..body = Code("""
             if (documentSnapshot.exists) {
               return ${snapshotName}(
-                ${fieldsForSnapshot.map((f) => "${f.name}: ${(f.type.type.name == "array") ? "_convertDartTypeInList" : "_convertDartType"}(documentSnapshot[\"${f.name}\"])").join(",\n")}
+                ${parametersForSnapshot.map((f) => "${f.name}: ${(f.type.type.name == "array") ? "_convertDartTypeInList" : "_convertDartType"}(documentSnapshot[\"${f.name}\"])").join(",\n")}
               );
             } else {
               return null;
@@ -341,7 +378,7 @@ class _AstTraverser {
           """)),
       ]));
 
-    final enumClasses = fieldsForSnapshot
+    final enumClasses = document.fields
         .where((f) => f.type.type is ast.HasValueType)
         .map((f) => f.type.type as ast.HasValueType)
         .map((t) {
@@ -431,6 +468,7 @@ class _AstTraverser {
         .expand((i) => i);
 
     return [
+      documentSchemaClass,
       documentRefToRawFunc,
       rawToDocumentReference,
       documentRefClass,
