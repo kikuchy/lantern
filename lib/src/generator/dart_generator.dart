@@ -7,8 +7,24 @@ Reference _referStorage(String symbol) =>
     refer(symbol, "package:firebase_storage/firebase_storage.dart");
 
 Reference _futureRefer(String symbol, [String url]) {
+  return _futureOf(refer(symbol, url));
+}
+
+Reference _futureOf(Reference reference) {
   return TypeReference((b) => b
     ..symbol = "Future"
+    ..types.add(reference));
+}
+
+Reference _function1Reference(Reference returnType, Reference argType) {
+  return FunctionType((b) => b
+    ..returnType = returnType
+    ..requiredParameters.add(argType));
+}
+
+Reference _documentSnapshotOf(String symbol, [String url]) {
+  return TypeReference((b) => b
+    ..symbol = "DocumentSnapshot"
     ..types.add(refer(symbol, url)));
 }
 
@@ -138,13 +154,15 @@ class _AstTraverser {
     final name = _documentClassName(parent);
     final snapshotName = "${name}Snapshot";
     final referenceName = "${name}Document";
+    final hasCreatedAt = document.params
+        .any((p) => p.name == ParameterChecker.saveCreatedDate && p.value);
+    var hasModifiedAt = document.params
+        .any((p) => p.name == ParameterChecker.saveModifiedDate && p.value);
     final fieldsForSnapshot = [
-      if (document.params
-          .any((p) => p.name == ParameterChecker.saveCreatedDate && p.value))
+      if (hasCreatedAt)
         ast.Field(
             ast.FieldType(ast.DeclaredType.timestamp, false), "createdAt"),
-      if (document.params
-          .any((p) => p.name == ParameterChecker.saveModifiedDate && p.value))
+      if (hasModifiedAt)
         ast.Field(
             ast.FieldType(ast.DeclaredType.timestamp, false), "modifiedAt"),
     ];
@@ -216,14 +234,14 @@ class _AstTraverser {
           ..lambda = true
           ..body = Code("${parent.name}Collection(reference.parent())")),
         Method((b) => b
-          ..returns = _futureRefer(snapshotName)
-          ..name = "getSnapshot"
+          ..returns = _futureOf(_documentSnapshotOf(snapshotName))
+          ..name = "get"
           ..body = Code.scope((allocate) => """
-            return reference.get().then((s) => ${snapshotName}.fromSnapshot(s));
+            return reference.get().then((s) => DocumentSnapshot<${snapshotName}>(s, (w) => ${snapshotName}(w)));
           """)),
         Method((b) => b
-          ..returns = _referStreamOf(snapshotName)
-          ..name = "snapshotUpdates"
+          ..returns = _referStreamOf("DocumentSnapshot<$snapshotName>")
+          ..name = "snapshots"
           ..optionalParameters.add(Parameter((b) => b
             ..named = true
             ..type = refer("bool")
@@ -232,47 +250,42 @@ class _AstTraverser {
           ..body = Code("""
             return reference
                 .snapshots(includeMetadataChanges: includeMetadataChanges)
-                .map((s) => ${snapshotName}.fromSnapshot(s));
+                .map((s) => DocumentSnapshot<${snapshotName}>(s, (w) => ${snapshotName}(w)));
           """)),
         Method((b) => b
           ..returns = _futureRefer("void")
           ..name = "delete"
           ..body = Code("return reference.delete();")),
         Method((b) => b
-          ..returns = _futureRefer(snapshotName)
-          ..name = "create"
-          ..optionalParameters
-              .addAll(document.fields.map((f) => Parameter((b) => b
-                ..named = true
-                ..annotations.addAll([
-                  if (!f.type.nullable)
-                    refer("required", "package:meta/meta.dart"),
-                ])
-                ..name = f.name
-                ..type = _dartFieldTypeDeclaration(f.type))))
+          ..returns = _futureRefer("void")
+          ..name = "setData"
+          ..requiredParameters.add(Parameter((b) => b
+            ..type = refer(name)
+            ..name = "data"))
+          ..optionalParameters.add(Parameter((b) => b
+            ..named = true
+            ..type = refer("bool")
+            ..name = "merge"))
           ..body = Code("""
-            ${document.fields.where((f) => !f.type.nullable).map((f) => "${_assertNotNull(f.name)};").join("\n")}
+            assert(data != null);
 
             final now = DateTime.now();
             final createdAt = now;
             final modifiedAt = now;
-            final data = <String, Future<dynamic>>{
+            final m = <String, Future<dynamic>>{
               ${[
             ...document.fields.map((f) =>
-                "\"${f.name}\": _convertFirestoreStructure(${f.name}, reference.path)"),
-            if (document.params.any(
-                (p) => p.name == ParameterChecker.saveCreatedDate && p.value))
+                "\"${f.name}\": _convertFirestoreStructure(data.${f.name}, reference.path)"),
+            if (hasCreatedAt)
               "\"createdAt\": _convertFirestoreStructure(createdAt, reference.path)",
-            if (document.params.any(
-                (p) => p.name == ParameterChecker.saveModifiedDate && p.value))
+            if (hasModifiedAt)
               "\"modifiedAt\": _convertFirestoreStructure(modifiedAt, reference.path)",
           ].join(",")}
             };
             return Future
-                .wait(data.values)
-                .then((values) => Map.fromIterables(data.keys, values))
-                .then((data) => reference.setData(data))
-                .then((_) => ${snapshotName}(${parametersForSnapshot.map((f) => "${f.name}: ${f.name}").join(",")}));
+                .wait(m.values)
+                .then((values) => Map.fromIterables(m.keys, values))
+                .then((data) => reference.setData(data, merge: merge));
           """)),
         Method((b) => b
           ..returns = _futureRefer(snapshotName)
@@ -287,12 +300,10 @@ class _AstTraverser {
                 .updateData({
                   ${[
             ...document.fields.map((f) => "\"${f.name}\": ${f.name}"),
-            if (document.params.any(
-                (p) => p.name == ParameterChecker.saveModifiedDate && p.value))
-              "\"modifiedAt\": DateTime.now()",
+            if (hasModifiedAt) "\"modifiedAt\": DateTime.now()",
           ].join(",")}
                 })
-                .then((_) => getSnapshot());
+                .then((_) => get());
           """)),
         ...document.collections.map((c) => Method((b) => b
           ..returns = refer("${c.name}Collection")
@@ -328,55 +339,46 @@ class _AstTraverser {
 
     final documentSnapshotClass = Class((b) => b
       ..name = snapshotName
-      ..extend = refer(name)
-      ..fields.replace(fieldsForSnapshot.map((f) => Field((b) => b
-        ..modifier = FieldModifier.final$
-        ..type = _dartFieldTypeDeclaration(f.type)
-        ..name = f.name)))
-      ..constructors.addAll([
-        Constructor((b) => b
-          ..constant = true
-          ..optionalParameters.addAll([
-            ...document.fields.map((f) => Parameter((b) => b
-              ..named = true
-              ..annotations.addAll([
-                if (!f.type.nullable)
-                  refer("required", "package:meta/meta.dart"),
-              ])
-              ..type = _dartFieldTypeDeclaration(f.type)
-              ..name = f.name)),
-            ...fieldsForSnapshot.map((f) => Parameter((b) => b
-              ..named = true
-              ..annotations.addAll([
-                if (!f.type.nullable)
-                  refer("required", "package:meta/meta.dart"),
-              ])
-              ..toThis = true
-              ..name = f.name)),
-          ])
-          ..initializers.addAll([
-            ...fieldsForSnapshot
-                .where((f) => !f.type.nullable)
-                .map((f) => _assertNotNull(f.name)),
-            Code(
-                "super(${document.fields.map((f) => "${f.name}: ${f.name}").join(", ")})"),
-          ])),
-        Constructor((b) => b
-          ..factory = true
-          ..name = "fromSnapshot"
-          ..requiredParameters.add((Parameter((b) => b
-            ..type = _referFirestore("DocumentSnapshot")
-            ..name = "documentSnapshot")))
-          ..body = Code("""
-            if (documentSnapshot.exists) {
-              return ${snapshotName}(
-                ${parametersForSnapshot.map((f) => "${f.name}: ${(f.type.type.name == "array") ? "_convertDartTypeInList" : "_convertDartType"}(documentSnapshot[\"${f.name}\"])").join(",\n")}
-              );
-            } else {
-              return null;
-            }
-          """)),
-      ]));
+      ..implements.addAll([
+        refer(name),
+        if (hasCreatedAt) refer("CreatedAt"),
+        if (hasModifiedAt) refer("ModifiedAt")
+      ])
+      ..fields.addAll([
+        Field((b) => b
+          ..modifier = FieldModifier.final$
+          ..type = refer("Map<String, dynamic>")
+          ..name = "_data"),
+      ])
+      ..methods.addAll([
+        ...document.fields.map((f) => Method((b) => b
+          ..annotations.add(refer("override"))
+          ..returns = _dartFieldTypeDeclaration(f.type)
+          ..type = MethodType.getter
+          ..name = f.name
+          ..lambda = true
+          ..body = Code("_data[\"${f.name}\"]"))),
+        if (hasCreatedAt)
+          Method((b) => b
+            ..annotations.add(refer("override"))
+            ..returns = refer("DateTime")
+            ..type = MethodType.getter
+            ..name = "createdAt"
+            ..lambda = true
+            ..body = Code("_data[\"createdAt\"].toDate()")),
+        if (hasModifiedAt)
+          Method((b) => b
+            ..annotations.add(refer("override"))
+            ..returns = refer("DateTime")
+            ..type = MethodType.getter
+            ..name = "modifiedAt"
+            ..lambda = true
+            ..body = Code("_data[\"modifiedAt\"].toDate()")),
+      ])
+      ..constructors.add(Constructor((b) => b
+        ..requiredParameters.add(Parameter((b) => b
+          ..toThis = true
+          ..name = "_data")))));
 
     final enumClasses = document.fields
         .where((f) => f.type.type is ast.HasValueType)
@@ -598,9 +600,9 @@ class DartCodeGenerator implements CodeGenerator {
             return v.map(_dartTypeConverterMap[T] ?? _idConverter).cast<T>().toList();
         """)),
       Code(
-          "\ntypedef FirestoreStructureConverter<T, U> = Future<T> Function(U, String);\n"),
+          "\ntypedef FirestoreStructureConverter<T, U> = T Function(U, String);\n"),
       Method((b) => b
-        ..returns = _futureRefer("T")
+        ..returns = refer("T")
         ..name = "_delayedIdConverter"
         ..types.add(refer("T"))
         ..requiredParameters.addAll([
@@ -611,7 +613,6 @@ class DartCodeGenerator implements CodeGenerator {
             ..type = refer("String")
             ..name = "documentPath"),
         ])
-        ..modifier = MethodModifier.async
         ..body = Code("return v;")),
       Method((b) => b
         ..returns = _futureRefer("Map<String, dynamic>")
@@ -734,6 +735,69 @@ class DartCodeGenerator implements CodeGenerator {
             ..name = "uri"
             ..body = Code("return Uri.parse(_fileStructure[\"url\"]);")),
         ])),
+      Class((b) => b
+        ..name = "CreatedAt"
+        ..abstract = true
+        ..methods.add(Method((b) => b
+          ..returns = refer("DateTime")
+          ..type = MethodType.getter
+          ..name = "createdAt"))),
+      Class((b) => b
+        ..name = "ModifiedAt"
+        ..abstract = true
+        ..methods.add(Method((b) => b
+          ..returns = refer("DateTime")
+          ..type = MethodType.getter
+          ..name = "modifiedAt"))),
+      Class((b) => b
+        ..name = "DocumentSnapshot"
+        ..types.add(refer("T"))
+        ..fields.addAll([
+          Field((b) => b
+            ..modifier = FieldModifier.final$
+            ..type = _referFirestore("DocumentSnapshot")
+            ..name = "_wrapped"),
+          Field((b) => b
+            ..modifier = FieldModifier.final$
+            ..type = _function1Reference(
+                refer("T"), _referFirestore("DocumentSnapshot"))
+            ..name = "_constructor"),
+        ])
+        ..constructors.add(Constructor((b) => b
+          ..requiredParameters.addAll([
+            Parameter((b) => b
+              ..toThis = true
+              ..name = "_wrapped"),
+            Parameter((b) => b
+              ..toThis = true
+              ..name = "_constructor"),
+          ])))
+        ..methods.addAll([
+          Method((b) => b
+            ..returns = refer("T")
+            ..type = MethodType.getter
+            ..name = "data"
+            ..lambda = true
+            ..body = Code("_constructor(_wrapped)")),
+          Method((b) => b
+            ..returns = _referFirestore("SnapshotMetadata")
+            ..type = MethodType.getter
+            ..name = "metadata"
+            ..lambda = true
+            ..body = Code("_wrapped.metadata")),
+          Method((b) => b
+            ..returns = refer("String")
+            ..type = MethodType.getter
+            ..name = "documentID"
+            ..lambda = true
+            ..body = Code("_wrapped.documentID")),
+          Method((b) => b
+            ..returns = refer("bool")
+            ..type = MethodType.getter
+            ..name = "exists"
+            ..lambda = true
+            ..body = Code("_wrapped.exists")),
+        ]))
     ];
   }
 
