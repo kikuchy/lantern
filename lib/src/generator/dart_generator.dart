@@ -158,18 +158,6 @@ class _AstTraverser {
         .any((p) => p.name == ParameterChecker.saveCreatedDate && p.value);
     var hasModifiedAt = document.params
         .any((p) => p.name == ParameterChecker.saveModifiedDate && p.value);
-    final fieldsForSnapshot = [
-      if (hasCreatedAt)
-        ast.Field(
-            ast.FieldType(ast.DeclaredType.timestamp, false), "createdAt"),
-      if (hasModifiedAt)
-        ast.Field(
-            ast.FieldType(ast.DeclaredType.timestamp, false), "modifiedAt"),
-    ];
-    final parametersForSnapshot = [
-      ...document.fields,
-      ...fieldsForSnapshot,
-    ];
 
     final documentSchemaClass = Class((b) => b
       ..name = name
@@ -191,6 +179,67 @@ class _AstTraverser {
         ..initializers.addAll(document.fields
             .where((f) => !f.type.nullable)
             .map((f) => _assertNotNull(f.name))))));
+
+    final documentReferenceToRawReferenceFunc = Method((b) => b
+      ..returns = _futureRefer(
+          "DocumentReference", "package:cloud_firestore/cloud_firestore.dart")
+      ..name = "_reference${referenceName}ToRawReferenceConverter"
+      ..requiredParameters.addAll([
+        Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"),
+        Parameter((b) => b
+          ..type = refer("String")
+          ..name = "documentPath"),
+        Parameter((b) => b
+          ..type = refer("String")
+          ..name = "paramName"),
+      ])
+      ..modifier = MethodModifier.async
+      ..body = Code("return v.reference;"));
+
+    final rawReferenceToDocumentReferenceFunc = Method((b) => b
+      ..returns = refer(referenceName)
+      ..name = "_rawReferenceToReference${referenceName}Converter"
+      ..requiredParameters.add(Parameter((b) => b
+        ..type = refer(("dynamic"))
+        ..name = "v"))
+      ..body = Code("return ${referenceName}(v);"));
+
+    final mapToDocumentSchemaFunc = Method((b) => b
+      ..returns = refer(name)
+      ..name = "_mapTo${name}SchemaConverter"
+      ..requiredParameters.add(Parameter((b) => b
+        ..type = refer(("dynamic"))
+        ..name = "v"))
+        ..body = Code("""
+        return $name(
+          ${document.fields.map((f) => "${f.name}: v[\"${f.name}\"]").join(",\n")}
+        );
+        """)
+    );
+
+    final documentSchemaToMapFunc = Method((b) => b
+      ..returns = _futureRefer("Map<String, dynamic>")
+      ..name = "_${name}SchemaToMapConverter"
+      ..requiredParameters.addAll([
+        Parameter((b) => b
+          ..type = refer("dynamic")
+          ..name = "v"),
+        Parameter((b) => b
+          ..type = refer("String")
+          ..name = "documentPath"),
+        Parameter((b) => b
+          ..type = refer("String")
+          ..name = "paramName"),
+      ])
+        ..modifier = MethodModifier.async
+        ..body = Code("""
+        return {
+          ${document.fields.map((f) => "\"${f.name}\": _convertFirestoreStructure(v.${f.name}, \"\$documentPath/\$paramName\", \"${f.name}\")").join(",\n")}
+        };
+        """)
+    );
 
     final documentRefClass = Class((b) => b
       ..name = referenceName
@@ -272,38 +321,31 @@ class _AstTraverser {
             final now = DateTime.now();
             final createdAt = now;
             final modifiedAt = now;
-            final m = <String, Future<dynamic>>{
-              ${[
-            ...document.fields.map((f) =>
-                "\"${f.name}\": _convertFirestoreStructure(data.${f.name}, reference.path)"),
-            if (hasCreatedAt)
-              "\"createdAt\": _convertFirestoreStructure(createdAt, reference.path)",
-            if (hasModifiedAt)
-              "\"modifiedAt\": _convertFirestoreStructure(modifiedAt, reference.path)",
-          ].join(",")}
-            };
-            return Future
-                .wait(m.values)
-                .then((values) => Map.fromIterables(m.keys, values))
+            return _convertFirestoreStructure(data, reference.path, "")
+                .then((data) {
+                  ${(hasCreatedAt) ? "data[\"createdAt\"] = createdAt;" : ""}
+                  ${(hasModifiedAt) ? "data[\"modifiedAt\"] = modifiedAt;" : ""}
+                  return data;
+                })
                 .then((data) => reference.setData(data, merge: merge));
           """)),
         Method((b) => b
-          ..returns = _futureRefer(snapshotName)
-          ..name = "update"
-          ..optionalParameters
-              .addAll(document.fields.map((f) => Parameter((b) => b
-                ..named = true
-                ..name = f.name
-                ..type = _dartFieldTypeDeclaration(f.type))))
+          ..returns = _futureRefer("void")
+          ..name = "updateData"
+          ..requiredParameters.add(Parameter((b) => b
+            ..type = refer(name)
+            ..name = "data"))
           ..body = Code("""
-            return reference
-                .updateData({
-                  ${[
-            ...document.fields.map((f) => "\"${f.name}\": ${f.name}"),
-            if (hasModifiedAt) "\"modifiedAt\": DateTime.now()",
-          ].join(",")}
+            assert(data != null);
+            
+            final now = DateTime.now();
+            final modifiedAt = now;
+            return _convertFirestoreStructure(data, reference.path, "")
+                .then((data) {
+                  ${(hasModifiedAt) ? "data[\"modifiedAt\"] = modifiedAt;" : ""}
+                  return data;
                 })
-                .then((_) => get());
+                .then((data) => reference.updateData(data));
           """)),
         ...document.collections.map((c) => Method((b) => b
           ..returns = refer("${c.name}Collection")
@@ -313,29 +355,6 @@ class _AstTraverser {
             return ${c.name}Collection(reference.collection("${c.name}"));
           """))),
       ]));
-
-    final documentRefToRawFunc = Method((b) => b
-      ..returns = _futureRefer(
-          "DocumentReference", "package:cloud_firestore/cloud_firestore.dart")
-      ..name = "_reference${referenceName}ToRawReferenceConverter"
-      ..requiredParameters.addAll([
-        Parameter((b) => b
-          ..type = refer("dynamic")
-          ..name = "v"),
-        Parameter((b) => b
-          ..type = refer("String")
-          ..name = "_")
-      ])
-      ..modifier = MethodModifier.async
-      ..body = Code("return v.reference;"));
-
-    final rawToDocumentReference = Method((b) => b
-      ..returns = refer(referenceName)
-      ..name = "_rawReferenceToReference${referenceName}Converter"
-      ..requiredParameters.add(Parameter((b) => b
-        ..type = refer(("dynamic"))
-        ..name = "v"))
-      ..body = Code("return ${referenceName}(v);"));
 
     final documentSnapshotClass = Class((b) => b
       ..name = snapshotName
@@ -462,7 +481,10 @@ class _AstTraverser {
                     ..name = "v"),
                   Parameter((b) => b
                     ..type = refer("String")
-                    ..name = "_")
+                    ..name = "documentPath"),
+                  Parameter((b) => b
+                    ..type = refer("String")
+                    ..name = "paramName"),
                 ])
                 ..modifier = MethodModifier.async
                 ..body = Code("return v.value;")),
@@ -471,8 +493,10 @@ class _AstTraverser {
 
     return [
       documentSchemaClass,
-      documentRefToRawFunc,
-      rawToDocumentReference,
+      documentReferenceToRawReferenceFunc,
+      rawReferenceToDocumentReferenceFunc,
+      mapToDocumentSchemaFunc,
+      documentSchemaToMapFunc,
       documentRefClass,
       documentSnapshotClass,
       ...enumClasses,
@@ -572,6 +596,7 @@ class DartCodeGenerator implements CodeGenerator {
             FileReference: _fileMapToFileReferenceConverter,
             ${enums.map((e) => "${e.identity}: _stringToEnum${e.identity}Converter,").join("\n")}
             ${documents.where((d) => d.name != null).map((d) => "${d.name}Document: _rawReferenceToReference${d.name}DocumentConverter,").join("\n")}
+            ${documents.where((d) => d.name != null).map((d) => "${d.name}: _mapTo${d.name}SchemaConverter,").join("\n")}
             // TODO: Converter for Geopoint
           }
         """)),
@@ -600,9 +625,9 @@ class DartCodeGenerator implements CodeGenerator {
             return v.map(_dartTypeConverterMap[T] ?? _idConverter).cast<T>().toList();
         """)),
       Code(
-          "\ntypedef FirestoreStructureConverter<T, U> = T Function(U, String);\n"),
+          "\ntypedef FirestoreStructureConverter<T, U> = Future<T> Function(U, String, String);\n"),
       Method((b) => b
-        ..returns = refer("T")
+        ..returns = _futureRefer("T")
         ..name = "_delayedIdConverter"
         ..types.add(refer("T"))
         ..requiredParameters.addAll([
@@ -612,7 +637,11 @@ class DartCodeGenerator implements CodeGenerator {
           Parameter((b) => b
             ..type = refer("String")
             ..name = "documentPath"),
+          Parameter((b) => b
+            ..type = refer("String")
+            ..name = "paramName"),
         ])
+        ..modifier = MethodModifier.async
         ..body = Code("return v;")),
       Method((b) => b
         ..returns = _futureRefer("Map<String, dynamic>")
@@ -624,6 +653,9 @@ class DartCodeGenerator implements CodeGenerator {
           Parameter((b) => b
             ..type = refer("String")
             ..name = "documentPath"),
+          Parameter((b) => b
+            ..type = refer("String")
+            ..name = "paramName"),
         ])
         ..modifier = MethodModifier.async
         ..body = Code.scope((allocate) => """
@@ -635,7 +667,7 @@ class DartCodeGenerator implements CodeGenerator {
             return {
               "additionlData": <String, dynamic>{},
               "mimeType": mimeType,
-              "path": documentPath,
+              "path": \"\$documentPath/\$paramName\",
               "url": await ref.getDownloadURL(),
             };
           } else {
@@ -653,7 +685,8 @@ class DartCodeGenerator implements CodeGenerator {
             _LocalFile: _fileReferenceToFileMapConverter,
             _RemoteFile: _fileReferenceToFileMapConverter,
             ${enums.map((e) => "${e.identity}: _enum${e.identity}ToStringConverter,").join("\n")}
-            ${documents.where((d) => d.name != null).map((d) => "${d.name}Document: _reference${d.name}DocumentToRawReferenceConverter,").join("\n")}
+            ${documents.where((d) => d.name != null).map((d) => "${d.name}: _reference${d.name}DocumentToRawReferenceConverter,").join("\n")}
+            ${documents.where((d) => d.name != null).map((d) => "${d.name}: _${d.name}SchemaToMapConverter,").join("\n")}
           }
         """)),
       Method((b) => b
@@ -667,13 +700,18 @@ class DartCodeGenerator implements CodeGenerator {
           Parameter((b) => b
             ..type = refer("String")
             ..name = "documentPath"),
+          Parameter((b) => b
+            ..type = refer("String")
+            ..name = "paramName"),
         ])
         ..body = Code("""
             if (v is List) {
-              return Future.wait(v.map((e) => _convertFirestoreStructure(e, documentPath)));
+              final ret = <Future>[];
+              v.asMap().forEach((i, e) => ret.add(_convertFirestoreStructure(e, "\$documentPath/\$paramName", "\$i")));
+              return Future.wait(ret);
             }
             final type = (T != dynamic) ? T : v.runtimeType;
-            return (_firestoreStructureConverterMap[type] ?? _delayedIdConverter).call(v, documentPath);
+            return (_firestoreStructureConverterMap[type] ?? _delayedIdConverter).call(v, documentPath, paramName);
         """)),
       Class((b) => b
         ..abstract = true
