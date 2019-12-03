@@ -117,6 +117,11 @@ class LanternParserDefinition extends LanternGrammarDefinition {
       .map((each) => HasValueType.enum$(each[1], each[3].cast<String>()));
 
   @override
+  Parser structType() => super
+      .structType()
+      .map((each) => TypedType.struct(DeclaredType(each[1][1])));
+
+  @override
   Parser nullType() => super.nullType().map((_) => DeclaredType.null$);
 
   @override

@@ -46,7 +46,8 @@ void main() {
         success: true,
       ),
       _TestCase(
-        description: "one collection, one document, one type unspecified array field",
+        description:
+            "one collection, one document, one type unspecified array field",
         source: """
           collection user {
             document User {
@@ -57,7 +58,8 @@ void main() {
         success: true,
       ),
       _TestCase(
-        description: "one collection, one document, one type specified array field",
+        description:
+            "one collection, one document, one type specified array field",
         source: """
           collection user {
             document User {
@@ -106,6 +108,22 @@ void main() {
           collection user {
             document User {
               reference<User> otherUser
+            }
+          }
+        """,
+        success: true,
+      ),
+      _TestCase(
+        description: "one collection, two documents, embed document structure",
+        source: """
+          collection user {
+            document User {
+              struct<Message> lastSent
+            }
+          }
+          collection messages {
+            document Message {
+              string body
             }
           }
         """,

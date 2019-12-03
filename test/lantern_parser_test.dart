@@ -131,6 +131,35 @@ void main() {
           }
         }
       """),
+      _SuccessCase(
+          "document struct type field",
+          Schema([
+            Collection(
+                "hoge",
+                [],
+                Document("Hoge", [], [
+                  Field(
+                      FieldType(TypedType.struct(DeclaredType("Fuga")), false),
+                      "fuga")
+                ], [])),
+            Collection(
+                "fuga",
+                [],
+                Document("Fuga", [],
+                    [Field(FieldType(DeclaredType.string, false), "moge")], []))
+          ]),
+          """
+        collection hoge {
+          document Hoge {
+            struct<Fuga> fuga
+          }
+        }
+        collection fuga {
+          document Fuga {
+            string moge
+          }
+        }
+      """),
     ];
     cases.forEach((c) {
       test("can parse ${c.description}", () {

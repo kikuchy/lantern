@@ -101,6 +101,7 @@ class LanternGrammarDefinition extends GrammarDefinition {
           ref(referenceType) |
           ref(enumType) |
           ref(fileType) |
+          ref(structType) |
           ref(nullType)) &
       ref(nullableSymbol).optional();
 
@@ -139,6 +140,9 @@ class LanternGrammarDefinition extends GrammarDefinition {
       ref(enumContentDefinition) &
       ref(token, "}");
 
+  Parser structType() =>
+      ref(token, "struct") & ref(typeParameter, typeNameDefinition());
+
   Parser nullType() => ref(token, "null");
 
   Parser typeParameter(Parser typesExpression) =>
@@ -155,6 +159,7 @@ class LanternGrammarDefinition extends GrammarDefinition {
       ref(geopointType) |
       ref(referenceType) |
       ref(fileType) |
+      ref(structType) |
       ref(nullType);
 
   Parser typeNameDefinition() => pattern("A-Za-z0-9_").plus();

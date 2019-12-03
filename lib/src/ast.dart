@@ -172,6 +172,8 @@ class TypedType extends DeclaredType {
   factory TypedType.array(DeclaredType t) => TypedType("array", t);
 
   factory TypedType.reference(DeclaredType t) => TypedType("reference", t);
+
+  factory TypedType.struct(DeclaredType t) => TypedType("struct", t);
 }
 
 class HasValueType extends DeclaredType {
