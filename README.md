@@ -106,4 +106,5 @@ And have fields and `collection`s in body.
 |`timestamp`|`timestamp`|`Timestamp`|`DateTime`|
 |`geopoint`|`geopoint`|`GeoPoint`|`Point`|
 |`reference<T>`|`reference`|`Document<T>`|`TDocument` (Document referencing class will be generated)| 
-
+|`struct<T>`|`map`|`T` (T should be Codable)|`T` (Document)|
+|`file`|`map` (file will be uploaded to Cloud Storage)|`File`|`FireReference`|
