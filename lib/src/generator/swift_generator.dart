@@ -47,6 +47,8 @@ class SwiftCodeGenerator implements CodeGenerator {
           return "Document<${type.typeParameter.name}>";
         } else if (type is ast.HasValueType && type.name == "enum") {
           return type.identity;
+        } else if (type is ast.TypedType && type.name == "struct") {
+          return type.typeParameter.name;
         }
     }
   }
@@ -83,6 +85,8 @@ class SwiftCodeGenerator implements CodeGenerator {
           return "Document<${type.typeParameter.name}>()";
         } else if (type is ast.HasValueType && type.name == "enum") {
           return ".${type.values.first}";
+        } else if (type is ast.TypedType && type.name == "struct") {
+          return "${type.typeParameter.name}()";
         }
     }
   }

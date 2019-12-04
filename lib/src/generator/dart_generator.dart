@@ -77,6 +77,8 @@ class _AstTraverser {
           return refer("${type.typeParameter.name}Document");
         } else if (type is ast.HasValueType && type.name == "enum") {
           return refer(type.identity);
+        } else if (type is ast.TypedType && type.name == "struct") {
+          return refer(type.typeParameter.name);
         }
     }
   }
@@ -212,12 +214,11 @@ class _AstTraverser {
       ..requiredParameters.add(Parameter((b) => b
         ..type = refer(("dynamic"))
         ..name = "v"))
-        ..body = Code("""
+      ..body = Code("""
         return $name(
           ${document.fields.map((f) => "${f.name}: v[\"${f.name}\"]").join(",\n")}
         );
-        """)
-    );
+        """));
 
     final documentSchemaToMapFunc = Method((b) => b
       ..returns = _futureRefer("Map<String, dynamic>")
@@ -233,13 +234,12 @@ class _AstTraverser {
           ..type = refer("String")
           ..name = "paramName"),
       ])
-        ..modifier = MethodModifier.async
-        ..body = Code("""
+      ..modifier = MethodModifier.async
+      ..body = Code("""
         return {
           ${document.fields.map((f) => "\"${f.name}\": _convertFirestoreStructure(v.${f.name}, \"\$documentPath/\$paramName\", \"${f.name}\")").join(",\n")}
         };
-        """)
-    );
+        """));
 
     final documentRefClass = Class((b) => b
       ..name = referenceName
@@ -370,13 +370,18 @@ class _AstTraverser {
           ..name = "_data"),
       ])
       ..methods.addAll([
-        ...document.fields.map((f) => Method((b) => b
-          ..annotations.add(refer("override"))
-          ..returns = _dartFieldTypeDeclaration(f.type)
-          ..type = MethodType.getter
-          ..name = f.name
-          ..lambda = true
-          ..body = Code("_data[\"${f.name}\"]"))),
+        ...document.fields.map((f) {
+          final type = f.type.type;
+          return Method((b) => b
+            ..annotations.add(refer("override"))
+            ..returns = _dartFieldTypeDeclaration(f.type)
+            ..type = MethodType.getter
+            ..name = f.name
+            ..lambda = true
+            ..body = (type is ast.TypedType && type.name == "array")
+                ? Code("_convertDartTypeInList(_data[\"${f.name}\"])")
+                : Code("_convertDartType(_data[\"${f.name}\"])"));
+        }),
         if (hasCreatedAt)
           Method((b) => b
             ..annotations.add(refer("override"))
