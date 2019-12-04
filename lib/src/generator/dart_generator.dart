@@ -41,6 +41,7 @@ class _AstTraverser {
   final Set<ast.Document> documents = {};
   final Set<ast.Collection> collections = {};
   final Set<ast.HasValueType> enums = {};
+  final Set<ast.Struct> structs = {};
 
   Reference _dartTypeReference(ast.DeclaredType type) {
     switch (type) {

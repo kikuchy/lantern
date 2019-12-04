@@ -1,10 +1,10 @@
+import 'package:lantern/src/analyzer.dart';
 import 'package:lantern/src/checker.dart';
 import 'package:lantern/src/generator/generator.dart';
 import 'package:lantern/src/lantern_parser.dart';
 
 List<GeneratedCodeFile> parseLantern(String source) {
   final parser = LanternParser();
-  final parameterChecker = ParameterChecker();
   final generators = [
     DartCodeGenerator("./"),
     SwiftCodeGenerator("./"),
@@ -13,7 +13,9 @@ List<GeneratedCodeFile> parseLantern(String source) {
 //    SecurityRulesGenerator("./")
   ];
   final parsed = parser.parse(source).map((schema) {
-    parameterChecker.check(schema);
+    ParameterChecker().check(schema);
+    final analyzed = Analyzer().analyze(schema);
+    TypeChecker().check(analyzed);
     return schema;
   }).map(
       (schema) => generators.map((g) => g.generate(schema)).expand((c) => c));
