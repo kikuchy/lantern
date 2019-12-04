@@ -237,7 +237,7 @@ class _AstTraverser {
       ..modifier = MethodModifier.async
       ..body = Code("""
         return {
-          ${document.fields.map((f) => "\"${f.name}\": _convertFirestoreStructure(v.${f.name}, \"\$documentPath/\$paramName\", \"${f.name}\")").join(",\n")}
+          ${document.fields.map((f) => "\"${f.name}\": await _convertFirestoreStructure(v.${f.name}, \"\$documentPath/\$paramName\", \"${f.name}\")").join(",\n")}
         };
         """));
 
@@ -286,7 +286,7 @@ class _AstTraverser {
           ..returns = _futureOf(_documentSnapshotOf(snapshotName))
           ..name = "get"
           ..body = Code.scope((allocate) => """
-            return reference.get().then((s) => DocumentSnapshot<${snapshotName}>(s, (w) => ${snapshotName}(w)));
+            return reference.get().then((s) => DocumentSnapshot<${snapshotName}>(s, (w) => ${snapshotName}(w.data)));
           """)),
         Method((b) => b
           ..returns = _referStreamOf("DocumentSnapshot<$snapshotName>")
@@ -299,7 +299,7 @@ class _AstTraverser {
           ..body = Code("""
             return reference
                 .snapshots(includeMetadataChanges: includeMetadataChanges)
-                .map((s) => DocumentSnapshot<${snapshotName}>(s, (w) => ${snapshotName}(w)));
+                .map((s) => DocumentSnapshot<${snapshotName}>(s, (w) => ${snapshotName}(w.data)));
           """)),
         Method((b) => b
           ..returns = _futureRefer("void")
@@ -314,7 +314,8 @@ class _AstTraverser {
           ..optionalParameters.add(Parameter((b) => b
             ..named = true
             ..type = refer("bool")
-            ..name = "merge"))
+            ..name = "merge"
+            ..defaultTo = Code("false")))
           ..body = Code("""
             assert(data != null);
 
