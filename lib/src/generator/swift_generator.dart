@@ -53,7 +53,7 @@ class SwiftCodeGenerator implements CodeGenerator {
     }
   }
 
-  String _swiftFieldTypeDeclaration(ast.FieldType firestoreType) {
+  String _swiftFieldTypeDeclaration(ast.TypeReference firestoreType) {
     final name = _swiftTypeName(firestoreType.type);
     return "$name${firestoreType.nullable ? "?" : ""}";
   }

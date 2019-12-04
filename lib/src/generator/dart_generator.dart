@@ -83,7 +83,7 @@ class _AstTraverser {
     }
   }
 
-  Reference _dartFieldTypeDeclaration(ast.FieldType firestoreType) {
+  Reference _dartFieldTypeDeclaration(ast.TypeReference firestoreType) {
     // note: Add nullable type support when Dartlang supports NNDB.
     return _dartTypeReference(firestoreType.type);
   }

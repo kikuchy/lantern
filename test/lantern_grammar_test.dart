@@ -129,6 +129,20 @@ void main() {
         """,
         success: true,
       ),
+      _TestCase(
+        description: "one collection, one document, embed standalone structure",
+        source: """
+          collection user {
+            document User {
+              struct Event {
+                string name
+                timestamp starts
+              } event
+            }
+          }
+        """,
+        success: true,
+      ),
     ];
     successes.forEach((c) {
       test(c.description, () {

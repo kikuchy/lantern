@@ -67,13 +67,35 @@ class CollectionParameter {
   int get hashCode => name.hashCode ^ value.hashCode;
 }
 
-class Document {
+class Struct {
   String name;
-  List<DocumentParameter> params = [];
   List<Field> fields = [];
+
+  Struct(this.name, this.fields);
+
+  @override
+  bool operator ==(other) =>
+      identical(this, other) ||
+      other is Struct &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          fields == other.fields;
+
+  @override
+  int get hashCode => name.hashCode ^ fields.hashCode;
+
+  @override
+  String toString() {
+    return "Struct $name { $fields }";
+  }
+}
+
+class Document extends Struct {
+  List<DocumentParameter> params = [];
   List<Collection> collections = [];
 
-  Document(this.name, this.params, this.fields, this.collections);
+  Document(String name, this.params, List<Field> fields, this.collections)
+      : super(name, fields);
 
   @override
   String toString() {
@@ -119,7 +141,7 @@ class DocumentParameter {
 }
 
 class Field {
-  FieldType type;
+  TypeReference type;
   String name;
 
   Field(this.type, this.name);
@@ -189,11 +211,23 @@ class HasValueType extends DeclaredType {
       HasValueType("enum", identity, values);
 }
 
-class FieldType {
+class HasStructType extends DeclaredType {
+  final Struct definition;
+
+  HasStructType(String name, this.definition) : super(name);
+
+  @override
+  String toString() => "${super.name} $definition";
+
+  factory HasStructType.struct(Struct definition) =>
+      HasStructType("struct", definition);
+}
+
+class TypeReference {
   DeclaredType type;
   bool nullable;
 
-  FieldType(this.type, this.nullable);
+  TypeReference(this.type, this.nullable);
 
   @override
   String toString() {
@@ -203,7 +237,7 @@ class FieldType {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is FieldType &&
+      other is TypeReference &&
           runtimeType == other.runtimeType &&
           type == other.type &&
           nullable == other.nullable;
