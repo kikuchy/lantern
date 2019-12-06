@@ -68,10 +68,29 @@ class DartCodeGenerator implements CodeGenerator {
             ..name = "values"),
         ])
         ..initializers
-            .add(Code("super(id: id, snapshot: snapshot, values: values)"))))
-      ..fields.addAll(document.fields.map((f) => Field((b) => b
-        ..type = _dartFieldTypeDeclaration(f.type)
-        ..name = f.name)))
+            .add(Code("super(id: id, snapshot: snapshot, values: values)"))
+        ..body = Block.of([
+          // TODO: ドキュメントが名無しだったとき対策
+          ...document.collections
+              .where((c) => c.document.name != null)
+              .map((c) => Code.scope((allocate) => """
+          ${c.name} = ${allocate(_referFlamingo("Collection"))}(this, \"${c.name}\");
+        """))
+        ])))
+      ..fields.addAll([
+        ...document.fields.map((f) => Field((b) => b
+          ..type = _dartFieldTypeDeclaration(f.type)
+          ..name = f.name)),
+        ...document.collections.where((c) => c.document.name != null).map((c) =>
+            Field((b) => b
+              ..type = TypeReference((b) => b
+                ..symbol = "Collection"
+                ..url = "package:flamingo/flamingo.dart"
+                // TODO: ドキュメントが入っているファイルを参照する方法の改良とドキュメントが名無しの場合の対策
+                ..types
+                    .add(refer(c.document.name, "${c.name}.firestore.g.dart")))
+              ..name = c.name)),
+      ])
       ..methods.addAll([
         _toDataFor(document.fields),
         _fromDataFor(document.fields),
