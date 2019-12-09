@@ -324,11 +324,11 @@ class DartCodeGenerator implements CodeGenerator {
       case ast.DeclaredType.integer:
         assigning = refer("valueFromKey<num>")
             .call(argsForReader)
-            .property("toInt")
+            .nullSafeProperty("toInt")
             .call(const []);
         break;
       case ast.DeclaredType.url:
-        assigning = refer("Uri").property("parse").call([
+        assigning = refer("((v) => (v != null) ? Uri.parse(v) : null)").call([
           refer("valueFromKey<String>").call(argsForReader),
         ]);
         break;
@@ -355,7 +355,9 @@ class DartCodeGenerator implements CodeGenerator {
               assigning = refer("valueListFromKey<String>")
                   .call(argsForReader)
                   .property("map")
-                  .call([CodeExpression(Code("(s) => Uri.parse(s)"))]);
+                  .call([
+                CodeExpression(Code("(s) => (s != null) ? Uri.parse(s) : null"))
+              ]);
               break;
             case ast.DeclaredType.map:
               assigning = refer("valueMapListFromKey").call(argsForReader);
@@ -376,8 +378,12 @@ class DartCodeGenerator implements CodeGenerator {
                     .call([
                   CodeExpression(Block.of([
                     Code("(s) =>"),
-                    refer(type.typeParameter.name)
-                        .newInstanceNamed("fromValue", [refer("s")]).code,
+                    refer("s != null")
+                        .conditional(
+                            refer(type.typeParameter.name)
+                                .newInstanceNamed("fromValue", [refer("s")]),
+                            literal(null))
+                        .code,
                   ]))
                 ]);
                 break;
@@ -439,8 +445,9 @@ class DartCodeGenerator implements CodeGenerator {
         } else if (type is ast.TypedType && type.name == "reference") {
           assigning = refer("valueFromKey").call(argsForReader);
         } else if (type is ast.HasValueType && type.name == "enum") {
-          assigning = refer(type.identity).newInstanceNamed(
-              "fromValue", [refer("valueFromKey<String>").call(argsForReader)]);
+          assigning = refer(
+                  "((v) => (v != null) ? ${type.identity}.fromValue(v) : null)")
+              .call([refer("valueFromKey<String>").call(argsForReader)]);
         } else if (type is ast.TypedType && type.name == "struct") {
           final definition = analyzed.definedStructs
               .firstWhere((s) => s.name == type.typeParameter.name);
