@@ -7,7 +7,8 @@ class SwiftCodeGenerator implements CodeGenerator {
   SwiftCodeGenerator(this.basePath);
 
   @override
-  Iterable<GeneratedCodeFile> generate(ast.Schema schema) {
+  Iterable<GeneratedCodeFile> generate(
+      ast.Schema schema, AnalyzingResult analyzed) {
     return codeForCollections(schema.collections);
   }
 

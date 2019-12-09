@@ -1,4 +1,5 @@
 import 'package:lantern/src/analyzer.dart';
+import 'package:lantern/src/ast.dart';
 import 'package:lantern/src/checker.dart';
 import 'package:lantern/src/generator/generator.dart';
 import 'package:lantern/src/lantern_parser.dart';
@@ -16,8 +17,9 @@ List<GeneratedCodeFile> parseLantern(String source) {
     ParameterChecker().check(schema);
     final analyzed = Analyzer().analyze(schema);
     TypeChecker().check(analyzed);
-    return schema;
-  }).map(
-      (schema) => generators.map((g) => g.generate(schema)).expand((c) => c));
+    // note: Just instead of Tuple
+    return MapEntry(schema, analyzed);
+  }).map((pair) =>
+      generators.map((g) => g.generate(pair.key, pair.value)).expand((c) => c));
   return parsed.value.toList();
 }

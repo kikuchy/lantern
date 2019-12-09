@@ -8,41 +8,54 @@ class DartCodeGenerator implements CodeGenerator {
   DartCodeGenerator(this.basePath);
 
   @override
-  Iterable<GeneratedCodeFile> generate(ast.Schema schema) {
-    return _codeForCollections(schema.collections);
+  Iterable<GeneratedCodeFile> generate(
+      ast.Schema schema, AnalyzingResult analyzed) {
+    return _codeForCollections(schema.collections, analyzed);
   }
 
   Iterable<GeneratedCodeFile> _codeForCollections(
-      List<ast.Collection> collections) {
+      List<ast.Collection> collections, AnalyzingResult analyzed) {
     return collections
-        .map((c) => _codeForDocument(c.document, c))
+        .map((c) => _codeForDocument(c.document, c, analyzed))
         .expand((i) => i);
   }
 
   Iterable<GeneratedCodeFile> _codeForDocument(
-      ast.Document document, ast.Collection parent) {
+      ast.Document document, ast.Collection parent, AnalyzingResult analyzed) {
     final lib = Library((b) => b
       ..body.addAll([
-        if (document.name != null) _documentClass(document),
+        if (document.name != null) _documentClass(document, analyzed),
         ...document.fields
             .where((f) => f.type.type is ast.HasValueType)
             .map((f) => _enumClass(f)),
         ...document.fields
             .where((f) => f.type.type is ast.HasStructType)
-            .map(_modelClasses)
+            .map((f) => _modelClasses(f, analyzed))
             .expand((i) => i),
       ]));
     return [
       if (document.name != null)
-        GeneratedCodeFile("$basePath/${parent.name}.firestore.g.dart",
+        GeneratedCodeFile(
+            "$basePath/${_generateDocumentPath(document, analyzed)}",
             _formatter.format("${lib.accept(DartEmitter.scoped())}")),
-      ..._codeForCollections(document.collections),
+      ..._codeForCollections(document.collections, analyzed),
     ];
+  }
+
+  String _generateDocumentPath(
+      ast.Document document, AnalyzingResult analyzed) {
+    final ancestors = <String>[];
+    for (ast.Document current = document; current != null;) {
+      final parent = analyzed.parentCollectionOfDocument[current];
+      ancestors.add(parent.name);
+      current = analyzed.parentDocumentOfCollection[parent];
+    }
+    return "${ancestors.reversed.join("_")}.firestore.g.dart";
   }
 
   final _overrideAnnotation = refer("override");
 
-  Class _documentClass(ast.Document document) {
+  Class _documentClass(ast.Document document, AnalyzingResult analyzed) {
     final nameOfDocument = document.name;
 
     return Class((b) => b
@@ -79,16 +92,16 @@ class DartCodeGenerator implements CodeGenerator {
         ])))
       ..fields.addAll([
         ...document.fields.map((f) => Field((b) => b
-          ..type = _dartFieldTypeDeclaration(f.type)
+          ..type = _dartFieldTypeDeclaration(f.type, analyzed)
           ..name = f.name)),
         ...document.collections.where((c) => c.document.name != null).map((c) =>
             Field((b) => b
               ..type = TypeReference((b) => b
                 ..symbol = "Collection"
                 ..url = "package:flamingo/flamingo.dart"
-                // TODO: ドキュメントが入っているファイルを参照する方法の改良とドキュメントが名無しの場合の対策
-                ..types
-                    .add(refer(c.document.name, "${c.name}.firestore.g.dart")))
+                // TODO: ドキュメントが名無しの場合の対策
+                ..types.add(refer(c.document.name,
+                    _generateDocumentPath(c.document, analyzed))))
               ..name = c.name)),
       ])
       ..methods.addAll([
@@ -120,12 +133,14 @@ class DartCodeGenerator implements CodeGenerator {
       ]));
   }
 
-  Reference _dartFieldTypeDeclaration(ast.TypeReference typeReference) {
+  Reference _dartFieldTypeDeclaration(
+      ast.TypeReference typeReference, AnalyzingResult analyzed) {
     // note: Add nullable type support when Dartlang supports NNDB.
-    return _dartTypeReference(typeReference.type);
+    return _dartTypeReference(typeReference.type, analyzed);
   }
 
-  Reference _dartTypeReference(ast.DeclaredType type) {
+  Reference _dartTypeReference(
+      ast.DeclaredType type, AnalyzingResult analyzed) {
     switch (type) {
       case ast.DeclaredType.string:
         return refer("String");
@@ -151,17 +166,24 @@ class DartCodeGenerator implements CodeGenerator {
             ..symbol = "List"
             ..types.addAll([
               if (type.typeParameter != null)
-                _dartTypeReference(type.typeParameter),
+                _dartTypeReference(type.typeParameter, analyzed),
             ]));
         } else if (type is ast.TypedType && type.name == "reference") {
           return _referFirestore("DocumentSnapshot");
         } else if (type is ast.HasValueType && type.name == "enum") {
           return refer(type.identity);
         } else if (type is ast.TypedType && type.name == "struct") {
-          // TODO: 他ファイルにいるDocumentを参照することが可能かどうか
-          return refer(type.typeParameter.name);
+          final definition = analyzed.definedStructs
+              .firstWhere((s) => s.name == type.typeParameter.name);
+          return refer(
+              type.typeParameter.name,
+              _generateDocumentPath(
+                  analyzed.parentDocumentOfStruct[definition], analyzed));
         } else if (type is ast.HasStructType) {
-          return refer(type.definition.name);
+          return refer(
+              type.definition.name,
+              _generateDocumentPath(
+                  analyzed.parentDocumentOfStruct[type.definition], analyzed));
         }
     }
   }
@@ -435,7 +457,7 @@ class DartCodeGenerator implements CodeGenerator {
         ..assignment = Code("[${enumDef.values.join((", "))}]"))));
   }
 
-  Iterable<Class> _modelClasses(ast.Field field) {
+  Iterable<Class> _modelClasses(ast.Field field, AnalyzingResult analyzed) {
     final structDef = (field.type.type as ast.HasStructType).definition;
 
     return [
@@ -445,7 +467,7 @@ class DartCodeGenerator implements CodeGenerator {
         ..constructors.add(Constructor((b) => b
           ..optionalParameters.addAll([
             ...structDef.fields.map((f) => Parameter((b) => b
-              ..type = _dartFieldTypeDeclaration(f.type)
+              ..type = _dartFieldTypeDeclaration(f.type, analyzed)
               ..name = f.name)),
             Parameter((b) => b
               ..named = true
@@ -454,7 +476,7 @@ class DartCodeGenerator implements CodeGenerator {
           ])
           ..initializers.add(Code("super(values: values)"))))
         ..fields.addAll(structDef.fields.map((f) => Field((b) => b
-          ..type = _dartFieldTypeDeclaration(f.type)
+          ..type = _dartFieldTypeDeclaration(f.type, analyzed)
           ..name = f.name)))
         ..methods.addAll([
           _toDataFor(structDef.fields),
@@ -462,7 +484,7 @@ class DartCodeGenerator implements CodeGenerator {
         ])),
       ...structDef.fields
           .where((f) => f.type.type is ast.HasStructType)
-          .map(_modelClasses)
+          .map((f) => _modelClasses(f, analyzed))
           .expand((i) => i),
     ];
   }

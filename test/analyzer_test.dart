@@ -29,7 +29,13 @@ void main() {
           AnalyzingResult()
             ..definedCollections.add(userCollection)
             ..definedDocuments.add(userDocument)
-            ..definedStructs.add(userDocument),
+            ..definedStructs.add(userDocument)
+            ..parentCollectionOfDocument.addAll({
+              userDocument: userCollection,
+            })
+            ..parentDocumentOfStruct.addAll({
+              userDocument: userDocument,
+            }),
           Schema([userCollection])),
       _SuccessCase(
           "referencing doccument",
@@ -46,7 +52,15 @@ void main() {
               userDocument,
               tweetDocument,
             ])
-            ..referenceToDocument.add(tweetDocument.fields.first.type.type),
+            ..referenceToDocument.add(tweetDocument.fields.first.type.type)
+            ..parentCollectionOfDocument.addAll({
+              userDocument: userCollection,
+              tweetDocument: tweetCollection,
+            })
+            ..parentDocumentOfStruct.addAll({
+              userDocument: userDocument,
+              tweetDocument: tweetDocument,
+            }),
           Schema([userCollection, tweetCollection])),
     ];
 
