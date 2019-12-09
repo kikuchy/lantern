@@ -119,7 +119,8 @@ class SecurityRulesGenerator implements CodeGenerator {
   SecurityRulesGenerator(this.basePath);
 
   @override
-  Iterable<GeneratedCodeFile> generate(ast.Schema schema) {
+  Iterable<GeneratedCodeFile> generate(
+      ast.Schema schema, AnalyzingResult analyzed) {
     final rule = RuleRoot.v2([
       Service("cloud.firestore", [
         MatchRule("/databases/{database}/documents", [],

@@ -32,14 +32,15 @@ void main() {
                   DocumentParameter("saveCreationDate", true),
                   DocumentParameter("saveModifiedDate", true)
                 ], [
-                  Field(FieldType(DeclaredType.string, false), "hoge"),
-                  Field(FieldType(DeclaredType.number, false), "fuga"),
+                  Field(TypeReference(DeclaredType.string, false), "hoge"),
+                  Field(TypeReference(DeclaredType.number, false), "fuga"),
                 ], [
                   Collection(
                       "talks",
                       [],
                       Document(null, [], [
-                        Field(FieldType(DeclaredType.boolean, false), "isHoge")
+                        Field(TypeReference(DeclaredType.boolean, false),
+                            "isHoge")
                       ], []))
                 ]))
           ]),
@@ -62,8 +63,11 @@ void main() {
             Collection(
                 "hoge",
                 [],
-                Document(null, [],
-                    [Field(FieldType(DeclaredType.string, true), "hoge")], []))
+                Document(
+                    null,
+                    [],
+                    [Field(TypeReference(DeclaredType.string, true), "hoge")],
+                    []))
           ]),
           """
         collection hoge {
@@ -79,7 +83,9 @@ void main() {
                 "hoge",
                 [],
                 Document(null, [], [
-                  Field(FieldType(TypedType.array(DeclaredType.string), false),
+                  Field(
+                      TypeReference(
+                          TypedType.array(DeclaredType.string), false),
                       "hoge")
                 ], []))
           ]),
@@ -98,7 +104,7 @@ void main() {
                 [],
                 Document(null, [], [
                   Field(
-                      FieldType(
+                      TypeReference(
                           HasValueType.enum$("Foo", ["foo", "bar", "buz"]),
                           false),
                       "hoge")
@@ -119,7 +125,7 @@ void main() {
                 [],
                 Document("Hoge", [], [
                   Field(
-                      FieldType(
+                      TypeReference(
                           TypedType.reference(DeclaredType("Hoge")), false),
                       "otherHoge")
                 ], []))
@@ -139,14 +145,18 @@ void main() {
                 [],
                 Document("Hoge", [], [
                   Field(
-                      FieldType(TypedType.struct(DeclaredType("Fuga")), false),
+                      TypeReference(
+                          TypedType.struct(DeclaredType("Fuga")), false),
                       "fuga")
                 ], [])),
             Collection(
                 "fuga",
                 [],
-                Document("Fuga", [],
-                    [Field(FieldType(DeclaredType.string, false), "moge")], []))
+                Document(
+                    "Fuga",
+                    [],
+                    [Field(TypeReference(DeclaredType.string, false), "moge")],
+                    []))
           ]),
           """
         collection hoge {
@@ -157,6 +167,32 @@ void main() {
         collection fuga {
           document Fuga {
             string moge
+          }
+        }
+      """),
+      _SuccessCase(
+          "document struct definition field",
+          Schema([
+            Collection(
+                "hoge",
+                [],
+                Document("Hoge", [], [
+                  Field(
+                      TypeReference(
+                          HasStructType.struct(Struct("Fuga", [
+                            Field(TypeReference(DeclaredType.string, false),
+                                "hoge")
+                          ])),
+                          false),
+                      "fuga")
+                ], [])),
+          ]),
+          """
+        collection hoge {
+          document Hoge {
+            struct Fuga {
+              string hoge
+            } fuga
           }
         }
       """),

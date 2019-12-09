@@ -7,7 +7,8 @@ class SwiftCodeGenerator implements CodeGenerator {
   SwiftCodeGenerator(this.basePath);
 
   @override
-  Iterable<GeneratedCodeFile> generate(ast.Schema schema) {
+  Iterable<GeneratedCodeFile> generate(
+      ast.Schema schema, AnalyzingResult analyzed) {
     return codeForCollections(schema.collections);
   }
 
@@ -53,7 +54,7 @@ class SwiftCodeGenerator implements CodeGenerator {
     }
   }
 
-  String _swiftFieldTypeDeclaration(ast.FieldType firestoreType) {
+  String _swiftFieldTypeDeclaration(ast.TypeReference firestoreType) {
     final name = _swiftTypeName(firestoreType.type);
     return "$name${firestoreType.nullable ? "?" : ""}";
   }

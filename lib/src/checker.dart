@@ -1,3 +1,4 @@
+import 'package:lantern/src/analyzer.dart';
 import 'package:lantern/src/ast.dart';
 
 class InvalidParameterError extends Error {
@@ -39,4 +40,55 @@ class ParameterChecker {
   }
 }
 
-class TypeChecker {}
+class ReferencingUndefinedDocumentError extends Error {
+  final Set<String> undefineds;
+
+  ReferencingUndefinedDocumentError(this.undefineds);
+
+  @override
+  String toString() =>
+      "Referenced documents below are not defined: ${undefineds.join(", ")}";
+}
+
+class EmbeddingUndefinedDocumentError extends Error {
+  final Set<String> undefineds;
+
+  EmbeddingUndefinedDocumentError(this.undefineds);
+
+  @override
+  String toString() =>
+      "Embedded documents below are not defined: ${undefineds.join(", ")}";
+}
+
+class TypeChecker {
+  void check(AnalyzingResult analyzed) {
+    _validateDocumentReferencing(analyzed);
+    _validateStructEmbedding(analyzed);
+  }
+
+  void _validateDocumentReferencing(AnalyzingResult analyzed) {
+    final unifiedDocuments =
+        analyzed.definedDocuments.map((d) => d.name).toSet();
+    final unifiedReferences =
+        analyzed.referenceToDocument.map((r) => r.typeParameter.name).toSet();
+
+    if (!unifiedDocuments.containsAll(unifiedReferences)) {
+      final undefinedButReferencedDocumentNames =
+          unifiedReferences.difference(unifiedDocuments);
+      throw ReferencingUndefinedDocumentError(
+          undefinedButReferencedDocumentNames);
+    }
+  }
+
+  void _validateStructEmbedding(AnalyzingResult analyzed) {
+    final unifiedStructs = analyzed.definedStructs.map((s) => s.name).toSet();
+    final unifiedEmbddeds =
+        analyzed.embeddedDocuments.map((d) => d.typeParameter.name).toSet();
+
+    if (!unifiedStructs.containsAll(unifiedEmbddeds)) {
+      final undefinedButEmbeddedDocumentNames =
+          unifiedEmbddeds.difference(unifiedStructs);
+      throw EmbeddingUndefinedDocumentError(undefinedButEmbeddedDocumentNames);
+    }
+  }
+}

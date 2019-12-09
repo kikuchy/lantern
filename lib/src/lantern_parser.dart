@@ -68,7 +68,7 @@ class LanternParserDefinition extends LanternGrammarDefinition {
 
   @override
   Parser field() => super.field().map(
-      (each) => Field(FieldType(each[0][0], each[0][1] ?? false), each[1]));
+      (each) => Field(TypeReference(each[0][0], each[0][1] ?? false), each[1]));
 
   @override
   Parser nullableSymbol() => super.nullableSymbol().map((each) => each != null);
@@ -117,9 +117,13 @@ class LanternParserDefinition extends LanternGrammarDefinition {
       .map((each) => HasValueType.enum$(each[1], each[3].cast<String>()));
 
   @override
-  Parser structType() => super
-      .structType()
+  Parser structReferencingType() => super
+      .structReferencingType()
       .map((each) => TypedType.struct(DeclaredType(each[1][1])));
+
+  @override
+  Parser structDefiningType() => super.structDefiningType().map(
+      (each) => HasStructType.struct(Struct(each[1], each[3].cast<Field>())));
 
   @override
   Parser nullType() => super.nullType().map((_) => DeclaredType.null$);

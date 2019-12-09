@@ -1,3 +1,13 @@
+## 0.0.3
+
+- Breaking change
+    - Now generated Dart codes depend on [flamingo](https://pub.dev/packages/flamingo)
+    - Lantern generates classes for flamingo's Document and Model.
+    - Generated files are separated into each collection.
+- Supports `enum{}` and `struct{}`
+    - `enum{}` will generate enum values.
+    - `struct{}` will generate Codable/Model classes.
+
 ## 0.0.2
 
 - Omit Firestore rule file generation.
