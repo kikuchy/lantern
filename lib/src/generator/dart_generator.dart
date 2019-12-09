@@ -125,17 +125,28 @@ class DartCodeGenerator implements CodeGenerator {
                 ..symbol = "Collection"
                 ..url = "package:flamingo/flamingo.dart"
                 // TODO: ドキュメントが名無しの場合の対策
-                ..types.add(refer(c.document.name,
+                ..types.add(refer(_nameOfStructModelClass(c.document),
                     _generateDocumentPath(c.document, analyzed))))
               ..name = c.name)),
       ])
       ..methods.addAll([
         _toDataFor(document.fields),
-        _fromDataFor(document.fields),
+        _fromDataFor(document.fields, analyzed),
+        _overrideModelName(document, analyzed),
       ]));
   }
 
-  Method _fromDataFor(List<ast.Field> fields) {
+  Method _overrideModelName(ast.Document document, AnalyzingResult analyzed) {
+    return Method((b) => b
+      ..annotations.add(_overrideAnnotation)
+      ..returns = refer("String")
+      ..name = "modelName"
+      ..lambda = true
+      ..body = literalString(analyzed.parentCollectionOfDocument[document].name)
+          .code);
+  }
+
+  Method _fromDataFor(List<ast.Field> fields, AnalyzingResult analyzed) {
     return Method((b) => b
       ..annotations.add(_overrideAnnotation)
       ..returns = refer("void")
@@ -143,7 +154,7 @@ class DartCodeGenerator implements CodeGenerator {
       ..requiredParameters.add(Parameter((b) => b
         ..type = refer("Map<String, dynamic>")
         ..name = "data"))
-      ..body = Block.of(fields.map(_readingExpressionFor)));
+      ..body = Block.of(fields.map((f) => _readingExpressionFor(f, analyzed))));
   }
 
   Method _toDataFor(List<ast.Field> fields) {
@@ -284,7 +295,7 @@ class DartCodeGenerator implements CodeGenerator {
     }
   }
 
-  Code _readingExpressionFor(ast.Field field) {
+  Code _readingExpressionFor(ast.Field field, AnalyzingResult analyzed) {
     final type = field.type.type;
 
     Expression assigning;
@@ -365,6 +376,8 @@ class DartCodeGenerator implements CodeGenerator {
                 break;
               } else if (type.typeParameter is ast.TypedType &&
                   type.typeParameter.name == "struct") {
+                final definition = analyzed.definedStructs
+                    .firstWhere((s) => s.name == type.typeParameter.name);
                 assigning = refer("valueMapListFromKey<String, String>")
                     .call(argsForReader)
                     .property("map")
@@ -374,7 +387,13 @@ class DartCodeGenerator implements CodeGenerator {
                     refer("d")
                         .notEqualTo(literal(null))
                         .conditional(
-                            refer(type.typeParameter.name).newInstance([], {
+                            refer(
+                                    _nameOfStructModelClass(definition),
+                                    _generateDocumentPath(
+                                        analyzed
+                                            .parentDocumentOfStruct[definition],
+                                        analyzed))
+                                .newInstance([], {
                               "values": refer("d"),
                             }),
                             literal((null)))
@@ -383,6 +402,8 @@ class DartCodeGenerator implements CodeGenerator {
                 ]);
                 break;
               } else if (type.typeParameter is ast.HasStructType) {
+                final definition =
+                    (type.typeParameter as ast.HasStructType).definition;
                 assigning = refer("valueMapListFromKey<String, String>")
                     .call(argsForReader)
                     .property("map")
@@ -392,7 +413,13 @@ class DartCodeGenerator implements CodeGenerator {
                     refer("d")
                         .notEqualTo(literal(null))
                         .conditional(
-                            refer(type.typeParameter.name).newInstance([], {
+                            refer(
+                                    _nameOfStructModelClass(definition),
+                                    _generateDocumentPath(
+                                        analyzed
+                                            .parentDocumentOfStruct[definition],
+                                        analyzed))
+                                .newInstance([], {
                               "values": refer("d"),
                             }),
                             literal((null)))
@@ -408,12 +435,23 @@ class DartCodeGenerator implements CodeGenerator {
           assigning = refer(type.identity).newInstanceNamed(
               "fromValue", [refer("valueFromKey<String>").call(argsForReader)]);
         } else if (type is ast.TypedType && type.name == "struct") {
-          assigning = refer(type.typeParameter.name).newInstance([], {
+          final definition = analyzed.definedStructs
+              .firstWhere((s) => s.name == type.typeParameter.name);
+          assigning = refer(
+                  _nameOfStructModelClass(definition),
+                  _generateDocumentPath(
+                      analyzed.parentDocumentOfStruct[definition], analyzed))
+              .newInstance([], {
             "values":
                 refer("valueMapFromKey<String, dynamic>").call(argsForReader),
           });
         } else if (type is ast.HasStructType) {
-          assigning = refer(type.definition.name).newInstance([], {
+          assigning = refer(
+                  _nameOfStructModelClass(type.definition),
+                  _generateDocumentPath(
+                      analyzed.parentDocumentOfStruct[type.definition],
+                      analyzed))
+              .newInstance([], {
             "values":
                 refer("valueMapFromKey<String, dynamic>").call(argsForReader),
           });
@@ -505,7 +543,7 @@ class DartCodeGenerator implements CodeGenerator {
           ..name = f.name)))
         ..methods.addAll([
           _toDataFor(structDef.fields),
-          _fromDataFor(structDef.fields),
+          _fromDataFor(structDef.fields, analyzed),
         ])),
       ...structDef.fields
           .where((f) => f.type.type is ast.HasStructType)
