@@ -40,7 +40,7 @@ Lantern has code generation toolkit. You can concentrate to using defined data s
 It can provide code for ...
 
 * Swift (depends on [Ballcap-iOS](https://github.com/1amageek/Ballcap-iOS))
-* Dart
+* Dart (depends on [flamingo](https://pub.dev/packages/flamingo))
 * Security rule file for Firestore
 
 ## Install
@@ -91,7 +91,9 @@ And have fields and `collection`s in body.
     map                     history
     timestamp               birthday
     geopoint                lastUsedFrom
+    enum {free, purchased}  memberRank
     reference<DocumentName> relatedDocument
+    struct<DocumentName>    embeddedDocument
 ```
 
 |Lantern Type|Firestore Type|Swift Type|Dart type|
@@ -103,8 +105,10 @@ And have fields and `collection`s in body.
 |`url`|`string`|`URL`|`Uri`|
 |`array<T>`|`array`|`[T]`|`List<T>`|
 |`map`|`map`|`[String : Any]`|`Map<String, dynamic>`|
-|`timestamp`|`timestamp`|`Timestamp`|`DateTime`|
-|`geopoint`|`geopoint`|`GeoPoint`|`Point`|
+|`timestamp`|`timestamp`|`Timestamp`|`Timestamp`|
+|`geopoint`|`geopoint`|`GeoPoint`|`GeoPoint`|
 |`reference<T>`|`reference`|`Document<T>`|`TDocument` (Document referencing class will be generated)| 
 |`struct<T>`|`map`|`T` (T should be Codable)|`T` (Document)|
-|`file`|`map` (file will be uploaded to Cloud Storage)|`File`|`FireReference`|
+|`file`|`map` (file will be uploaded to Cloud Storage)|`File`|`StorageFile`|
+|`enum{elements...}`|`string`|`enum` (enum classes will be generated)|`enum`(enum classes will be generated)|
+|`struct S {fields...}`|`map`|`S` (Codable class will be generated)|`SModel` (Model class will be generated)|
