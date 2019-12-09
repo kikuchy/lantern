@@ -64,6 +64,10 @@ class DartCodeGenerator implements CodeGenerator {
         ..constant = true
         ..optionalParameters
             .addAll(document.fields.map((f) => Parameter((b) => b
+              ..annotations.addAll([
+                if (!f.type.nullable)
+                  refer("required", "package:meta/meta.dart"),
+              ])
               ..toThis = true
               ..named = true
               ..name = f.name)))))
@@ -163,6 +167,9 @@ class DartCodeGenerator implements CodeGenerator {
       ..returns = refer("Map<String, dynamic>")
       ..name = "toData"
       ..body = Block.of([
+        ...fields
+            .where((f) => !f.type.nullable)
+            .map((f) => Code("assert(${f.name} != null);")),
         Code("final data = <String, dynamic>{};"),
         ...fields.map(_writingExpressionFor),
         Code("return data;"),
