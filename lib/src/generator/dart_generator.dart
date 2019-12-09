@@ -24,7 +24,8 @@ class DartCodeGenerator implements CodeGenerator {
       ast.Document document, ast.Collection parent, AnalyzingResult analyzed) {
     final lib = Library((b) => b
       ..body.addAll([
-        if (document.name != null) _documentClass(document, analyzed),
+        if (document.name != null) _documentModelClass(document, analyzed),
+        if (document.name != null) _documentSchemaClass(document, analyzed),
         ...document.fields
             .where((f) => f.type.type is ast.HasValueType)
             .map((f) => _enumClass(f)),
@@ -55,16 +56,39 @@ class DartCodeGenerator implements CodeGenerator {
 
   final _overrideAnnotation = refer("override");
 
-  Class _documentClass(ast.Document document, AnalyzingResult analyzed) {
-    final nameOfDocument = document.name;
+  Class _documentSchemaClass(ast.Document document, AnalyzingResult analyzed) {
+    final nameOfClass = document.name;
+    return Class((b) => b
+      ..name = nameOfClass
+      ..constructors.add(Constructor((b) => b
+        ..constant = true
+        ..optionalParameters
+            .addAll(document.fields.map((f) => Parameter((b) => b
+              ..toThis = true
+              ..named = true
+              ..name = f.name)))))
+      ..fields.addAll(document.fields.map((f) => Field((b) => b
+        ..modifier = FieldModifier.final$
+        ..type = _dartFieldTypeDeclaration(f.type, analyzed)
+        ..name = f.name))));
+  }
+
+  String _nameOfStructModelClass(ast.Struct struct) {
+    return (struct is ast.Document)
+        ? "${struct.name}Document"
+        : "${struct.name}Model";
+  }
+
+  Class _documentModelClass(ast.Document document, AnalyzingResult analyzed) {
+    final nameOfClass = _nameOfStructModelClass(document);
 
     return Class((b) => b
-      ..name = nameOfDocument
-      ..implements.add(_referFlamingo("Model"))
+      ..name = nameOfClass
+      ..implements.addAll([_referFlamingo("Model"), refer(document.name)])
       ..extend = TypeReference((b) => b
         ..symbol = "Document"
         ..url = "package:flamingo/flamingo.dart"
-        ..types.add(refer(nameOfDocument)))
+        ..types.add(refer(nameOfClass)))
       ..constructors.add(Constructor((b) => b
         ..optionalParameters.addAll([
           Parameter((b) => b
@@ -92,6 +116,7 @@ class DartCodeGenerator implements CodeGenerator {
         ])))
       ..fields.addAll([
         ...document.fields.map((f) => Field((b) => b
+          ..annotations.add(_overrideAnnotation)
           ..type = _dartFieldTypeDeclaration(f.type, analyzed)
           ..name = f.name)),
         ...document.collections.where((c) => c.document.name != null).map((c) =>
@@ -176,12 +201,12 @@ class DartCodeGenerator implements CodeGenerator {
           final definition = analyzed.definedStructs
               .firstWhere((s) => s.name == type.typeParameter.name);
           return refer(
-              type.typeParameter.name,
+              _nameOfStructModelClass(definition),
               _generateDocumentPath(
                   analyzed.parentDocumentOfStruct[definition], analyzed));
         } else if (type is ast.HasStructType) {
           return refer(
-              type.definition.name,
+              _nameOfStructModelClass(type.definition),
               _generateDocumentPath(
                   analyzed.parentDocumentOfStruct[type.definition], analyzed));
         }
