@@ -1,3 +1,7 @@
+## 0.0.4+1
+
+- Hotfix: to generate `@Subcollection`s as field of Documents on TypeScript
+
 ## 0.0.4
 
 - Supports TypeScript code generation
