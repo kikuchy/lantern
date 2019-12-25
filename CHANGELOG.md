@@ -1,3 +1,7 @@
+## 0.0.4
+
+- Supports TypeScript code generation
+
 ## 0.0.3
 
 - Breaking change

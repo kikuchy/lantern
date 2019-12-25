@@ -41,6 +41,7 @@ It can provide code for ...
 
 * Swift (depends on [Ballcap-iOS](https://github.com/1amageek/Ballcap-iOS))
 * Dart (depends on [flamingo](https://pub.dev/packages/flamingo))
+* TypeScript (depends on [ballcap.ts](https://github.com/1amageek/ballcap.ts))
 * Security rule file for Firestore
 
 ## Install
@@ -94,21 +95,22 @@ And have fields and `collection`s in body.
     enum {free, purchased}  memberRank
     reference<DocumentName> relatedDocument
     struct<DocumentName>    embeddedDocument
+    struct { string a }     embeddedStruct
 ```
 
-|Lantern Type|Firestore Type|Swift Type|Dart type|
-|:---:|:---:|:---:|:---:|
-|`string`|`string`|`String`|`String`|
-|`boolean`|`boolean`|`Bool`|`bool`|
-|`integer`|`number`|`Int`|`int`|
-|`number`|`number`|`Double`|`double`|
-|`url`|`string`|`URL`|`Uri`|
-|`array<T>`|`array`|`[T]`|`List<T>`|
-|`map`|`map`|`[String : Any]`|`Map<String, dynamic>`|
-|`timestamp`|`timestamp`|`Timestamp`|`Timestamp`|
-|`geopoint`|`geopoint`|`GeoPoint`|`GeoPoint`|
-|`reference<T>`|`reference`|`Document<T>`|`TDocument` (Document referencing class will be generated)| 
-|`struct<T>`|`map`|`T` (T should be Codable)|`T` (Document)|
-|`file`|`map` (file will be uploaded to Cloud Storage)|`File`|`StorageFile`|
-|`enum{elements...}`|`string`|`enum` (enum classes will be generated)|`enum`(enum classes will be generated)|
-|`struct S {fields...}`|`map`|`S` (Codable class will be generated)|`SModel` (Model class will be generated)|
+|Lantern Type|Firestore Type|Swift Type|Dart type|TypeScript Type|
+|:---:|:---:|:---:|:---:|:---:|
+|`string`|`string`|`String`|`String`|`string`|
+|`boolean`|`boolean`|`Bool`|`bool`|`boolean`|
+|`integer`|`number`|`Int`|`int`|`number`|
+|`number`|`number`|`Double`|`double`|`number`|
+|`url`|`string`|`URL`|`Uri`|`string`|
+|`array<T>`|`array`|`[T]`|`List<T>`|`[T]`|
+|`map`|`map`|`[String : Any]`|`Map<String, dynamic>`|`{}`|
+|`timestamp`|`timestamp`|`Timestamp`|`Timestamp`|`Timestamp`|
+|`geopoint`|`geopoint`|`GeoPoint`|`GeoPoint`|`GeoPoint`|
+|`reference<T>`|`reference`|`Document<T>`|`TDocument` (Document referencing class will be generated)|`DocumentRefernce`| 
+|`struct<T>`|`map`|`T` (T should be Codable)|`T` (Document)|`T` (Document)|
+|`file`|`map` (file will be uploaded to Cloud Storage)|`File`|`StorageFile`|`File`|
+|`enum{elements...}`|`string`|`enum` (enum classes will be generated)|`enum`(enum classes will be generated)|`enum`(const enum of string will be generated)|
+|`struct S {fields...}`|`map`|`S` (Codable class will be generated)|`SModel` (Model class will be generated)|`S` (interface will be generated)|
