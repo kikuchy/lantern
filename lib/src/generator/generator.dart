@@ -10,6 +10,8 @@ part './swift_generator.dart';
 
 part './security_rules_generator.dart';
 
+part './typescript_generator.dart';
+
 class GeneratedCodeFile {
   final String filePath;
   final String content;
