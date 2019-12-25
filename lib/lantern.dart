@@ -9,6 +9,7 @@ List<GeneratedCodeFile> parseLantern(String source) {
   final generators = [
     DartCodeGenerator("./"),
     SwiftCodeGenerator("./"),
+    TypeScriptGenerator("./"),
     // TODO(kikuchy): It's useless because lantern doesn't have expression of access control.
     //                Reimplement after update language feature.
 //    SecurityRulesGenerator("./")
