@@ -34,7 +34,7 @@ export class ${document.name} extends ${allocator.alloc("Doc", "@1amageek/ballca
     static modelName(): string {
         return "${parent.name}"
     }
-
+    ${document.collections.map((c) => "@${allocator.alloc("SubCollection", "@1amageek/ballcap-admin")} ${c.name}: ${allocator.alloc("Collection", "@1amageek/ballcap-admin")}<${allocator.alloc(c.document.name, "./${c.document.name}")}> = new ${allocator.alloc("Collection", "@1amageek/ballcap-admin")}()").join("\n    ")}
     ${(document.fields.map(((f) => "@${allocator.alloc("Field", "@1amageek/ballcap-admin")} ${f.typeScriptFieldName}: ${f.type.typeScriptTypeReferenceExpression(allocator, analyzed)}${f.type.hasDefaultValue ? " = ${f.type.type.typeScriptDefaultValue(allocator, analyzed)}" : ""}"))).join("\n    ")}
 }
 """),
@@ -75,6 +75,7 @@ class _TsGeneratedFile implements GeneratedCodeFile {
   String get content {
     final content = _contentGenerator(_allocator);
     return """
+/* tslint:disable */
 ${_allocator.imports.join("\n")}
 
 ${content}
