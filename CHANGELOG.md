@@ -1,3 +1,7 @@
+## 0.0.4+2
+
+- Hotfix: fixing runtime errors when you save the Document contains nullable enum field.
+
 ## 0.0.4+1
 
 - Hotfix: to generate `@Subcollection`s as field of Documents on TypeScript
