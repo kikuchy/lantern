@@ -240,7 +240,7 @@ class DartCodeGenerator implements CodeGenerator {
   Code _writingExpressionFor(ast.Field field) {
     if (field.type.type is ast.HasValueType) {
       return Code(
-          "${_writerMethodNameFor(field.type)}(data, \"${field.name}\", ${field.name}.value);");
+          "${_writerMethodNameFor(field.type)}(data, \"${field.name}\", ${field.name}${field.type.nullable ? "?" : ""}.value);");
     } else {
       return Code(
           "${_writerMethodNameFor(field.type)}(data, \"${field.name}\", ${field.name});");
