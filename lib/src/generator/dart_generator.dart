@@ -240,7 +240,7 @@ class DartCodeGenerator implements CodeGenerator {
   Code _writingExpressionFor(ast.Field field) {
     if (field.type.type is ast.HasValueType) {
       return Code(
-          "${_writerMethodNameFor(field.type)}(data, \"${field.name}\", ${field.name}.value);");
+          "${_writerMethodNameFor(field.type)}(data, \"${field.name}\", ${field.name}${field.type.nullable ? "?" : ""}.value);");
     } else {
       return Code(
           "${_writerMethodNameFor(field.type)}(data, \"${field.name}\", ${field.name});");
@@ -258,11 +258,9 @@ class DartCodeGenerator implements CodeGenerator {
       case ast.DeclaredType.map:
       case ast.DeclaredType.timestamp:
       case ast.DeclaredType.geopoint:
-        return (typeReference.nullable) ? "write" : "writeNotNull";
+        return "write";
       case ast.DeclaredType.file:
-        return (typeReference.nullable)
-            ? "writeStorage"
-            : "writeStorageNotNull";
+        return "writeStorage";
       default:
         if (type is ast.TypedType && type.name == "array") {
           switch (type.typeParameter) {
@@ -274,30 +272,26 @@ class DartCodeGenerator implements CodeGenerator {
             case ast.DeclaredType.map:
             case ast.DeclaredType.timestamp:
             case ast.DeclaredType.geopoint:
-              return (typeReference.nullable) ? "write" : "writeNotNull";
+              return "write";
             case ast.DeclaredType.file:
-              return (typeReference.nullable)
-                  ? "writeStorageList"
-                  : "writeStorageListNotNull";
+              return "writeStorageList";
             default:
               if (type is ast.TypedType && type.name == "reference") {
-                return (typeReference.nullable) ? "write" : "writeNotNull";
+                return "write";
               } else if (type is ast.HasValueType && type.name == "enum") {
-                return (typeReference.nullable) ? "write" : "writeNotNull";
+                return "write";
               } else if (type is ast.TypedType && type.name == "struct" ||
                   type is ast.HasStructType) {
-                return (typeReference.nullable)
-                    ? "writeModelList"
-                    : "writeModelListNotNull";
+                return "writeModelList";
               }
           }
         } else if (type is ast.TypedType && type.name == "reference") {
-          return (typeReference.nullable) ? "write" : "writeNotNull";
+          return "write";
         } else if (type is ast.HasValueType && type.name == "enum") {
-          return (typeReference.nullable) ? "write" : "writeNotNull";
+          return "write";
         } else if (type is ast.TypedType && type.name == "struct" ||
             type is ast.HasStructType) {
-          return (typeReference.nullable) ? "writeModel" : "writeModelNotNull";
+          return "writeModel";
         }
     }
   }
