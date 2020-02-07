@@ -1,6 +1,6 @@
 name: lantern
 description: Cloud Firestore's data structure definition language and code generator. Lantern lights bright future of your project.
-version: 0.0.4+2
+version: 0.0.4+3
 homepage: https://github.com/kikuchy/lantern
 
 executables:
