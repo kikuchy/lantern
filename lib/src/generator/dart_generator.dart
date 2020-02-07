@@ -554,8 +554,7 @@ class DartCodeGenerator implements CodeGenerator {
               ..annotations.addAll([if (!f.type.nullable) _requiredAnnotation])
               ..named = true
               ..toThis = true
-              ..name = f.name
-              ..type = _dartFieldTypeDeclaration(f.type, analyzed))))))
+              ..name = f.name)))))
       ..fields.addAll(structDef.fields.map((f) => Field((b) => b
         ..modifier = FieldModifier.final$
         ..name = f.name
