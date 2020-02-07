@@ -107,6 +107,10 @@ class DartCodeGenerator implements CodeGenerator {
             ..named = true
             ..type = refer("Map<String, dynamic>")
             ..name = "values"),
+          Parameter((b) => b
+            ..named = true
+            ..type = _referFirestore("CollectionReference")
+            ..name = "collectionRef"),
         ])
         ..initializers.add(Code(
             "super(id: id, snapshot: snapshot, values: values, collectionRef: collectionRef)"))
