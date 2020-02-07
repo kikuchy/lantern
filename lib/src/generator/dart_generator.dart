@@ -31,7 +31,7 @@ class DartCodeGenerator implements CodeGenerator {
             .map((f) => _enumClass(f)),
         ...document.fields
             .where((f) => f.type.type is ast.HasStructType)
-            .map((f) => _modelClasses(f, analyzed))
+            .map((f) => _codeForStruct(f, analyzed))
             .expand((i) => i),
       ]));
     return [
@@ -55,6 +55,7 @@ class DartCodeGenerator implements CodeGenerator {
   }
 
   final _overrideAnnotation = refer("override");
+  final _requiredAnnotation = refer("required", "package:meta/meta.dart");
 
   Class _documentSchemaClass(ast.Document document, AnalyzingResult analyzed) {
     final nameOfClass = document.name;
@@ -65,8 +66,7 @@ class DartCodeGenerator implements CodeGenerator {
         ..optionalParameters
             .addAll(document.fields.map((f) => Parameter((b) => b
               ..annotations.addAll([
-                if (!f.type.nullable)
-                  refer("required", "package:meta/meta.dart"),
+                if (!f.type.nullable) _requiredAnnotation,
               ])
               ..toThis = true
               ..named = true
@@ -108,8 +108,8 @@ class DartCodeGenerator implements CodeGenerator {
             ..type = refer("Map<String, dynamic>")
             ..name = "values"),
         ])
-        ..initializers
-            .add(Code("super(id: id, snapshot: snapshot, values: values)"))
+        ..initializers.add(Code(
+            "super(id: id, snapshot: snapshot, values: values, collectionRef: collectionRef)"))
         ..body = Block.of([
           // TODO: ドキュメントが名無しだったとき対策
           ...document.collections
@@ -528,35 +528,56 @@ class DartCodeGenerator implements CodeGenerator {
         ..assignment = Code("[${enumDef.values.join((", "))}]"))));
   }
 
-  Iterable<Class> _modelClasses(ast.Field field, AnalyzingResult analyzed) {
+  Iterable<Class> _codeForStruct(ast.Field field, AnalyzingResult analyzed) {
     final structDef = (field.type.type as ast.HasStructType).definition;
 
     return [
-      Class((b) => b
-        ..name = structDef.name
-        ..extend = _referFlamingo("Model")
-        ..constructors.add(Constructor((b) => b
-          ..optionalParameters.addAll([
-            ...structDef.fields.map((f) => Parameter((b) => b
-              ..type = _dartFieldTypeDeclaration(f.type, analyzed)
-              ..name = f.name)),
-            Parameter((b) => b
-              ..named = true
-              ..type = refer("Map<String, dynamic>")
-              ..name = "values"),
-          ])
-          ..initializers.add(Code("super(values: values)"))))
-        ..fields.addAll(structDef.fields.map((f) => Field((b) => b
-          ..type = _dartFieldTypeDeclaration(f.type, analyzed)
-          ..name = f.name)))
-        ..methods.addAll([
-          _toDataFor(structDef.fields),
-          _fromDataFor(structDef.fields, analyzed),
-        ])),
+      _structSchemaClass(structDef, analyzed),
+      _structModelClass(structDef, analyzed),
       ...structDef.fields
           .where((f) => f.type.type is ast.HasStructType)
-          .map((f) => _modelClasses(f, analyzed))
+          .map((f) => _codeForStruct(f, analyzed))
           .expand((i) => i),
     ];
+  }
+
+  Class _structSchemaClass(ast.Struct structDef, AnalyzingResult analyzed) {
+    return Class((b) => b
+      ..name = structDef.name
+      ..constructors.add(Constructor((b) => b
+        ..optionalParameters
+            .addAll(structDef.fields.map((f) => Parameter((b) => b
+              ..annotations.addAll([if (!f.type.nullable) _requiredAnnotation])
+              ..named = true
+              ..toThis = true
+              ..name = f.name
+              ..type = _dartFieldTypeDeclaration(f.type, analyzed))))))
+      ..fields.addAll(structDef.fields.map((f) => Field((b) => b
+        ..modifier = FieldModifier.final$
+        ..name = f.name
+        ..type = _dartFieldTypeDeclaration(f.type, analyzed)))));
+  }
+
+  Class _structModelClass(ast.Struct structDef, AnalyzingResult analyzed) {
+    return Class((b) => b
+      ..name = _nameOfStructModelClass(structDef)
+      ..extend = _referFlamingo("Model")
+      ..implements.add(refer(structDef.name))
+      ..constructors.add(Constructor((b) => b
+        ..optionalParameters.addAll([
+          Parameter((b) => b
+            ..named = true
+            ..type = refer("Map<String, dynamic>")
+            ..name = "values"),
+        ])
+        ..initializers.add(Code("super(values: values)"))))
+      ..fields.addAll(structDef.fields.map((f) => Field((b) => b
+        ..annotations.add(_overrideAnnotation)
+        ..type = _dartFieldTypeDeclaration(f.type, analyzed)
+        ..name = f.name)))
+      ..methods.addAll([
+        _toDataFor(structDef.fields),
+        _fromDataFor(structDef.fields, analyzed),
+      ]));
   }
 }
