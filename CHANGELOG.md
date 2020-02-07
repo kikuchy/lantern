@@ -1,3 +1,7 @@
+## 0.0.4+3
+
+- Hotfix: to separate schema class and model class of `Struct` on Dart
+
 ## 0.0.4+2
 
 - Hotfix: fixing runtime errors when you save the Document contains nullable enum field.
