@@ -191,7 +191,7 @@ extension _TsDeclaerdTypeExtension on ast.DeclaredType {
           switch (t.name) {
             case "array":
               final type = this as ast.TypedType;
-              return "[${type.typeParameter.typeScriptTypeNameExpression(allocator, analyzed)}]";
+              return "${type.typeParameter.typeScriptTypeNameExpression(allocator, analyzed)}[]";
             case "reference":
               return allocator.alloc(
                   "DocumentReference", "@1amageek/ballcap-admin");
