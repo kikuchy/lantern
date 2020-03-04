@@ -1,3 +1,7 @@
+## 0.0.4+4
+
+- Hotfix: fix mistake of https://github.com/kikuchy/lantern/issues/6 .
+
 ## 0.0.4+3
 
 - Hotfix: to separate schema class and model class of `Struct` on Dart
