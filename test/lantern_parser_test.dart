@@ -1,5 +1,5 @@
-import 'package:lantern/src/ast.dart';
-import 'package:lantern/src/lantern_parser.dart';
+import 'package:lantern/src/ast/ast.dart';
+import 'package:lantern/src/frontend/lantern_parser.dart';
 import 'package:test/test.dart';
 
 class _SuccessCase {

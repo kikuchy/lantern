@@ -1,5 +1,5 @@
-import 'package:lantern/src/ast.dart';
-import 'package:lantern/src/lantern_grammar.dart';
+import 'package:lantern/src/ast/ast.dart';
+import 'package:lantern/src/frontend/lantern_grammar.dart';
 import 'package:petitparser/petitparser.dart';
 
 class LanternParser extends GrammarParser {

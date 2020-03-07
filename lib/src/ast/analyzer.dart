@@ -1,5 +1,5 @@
 import 'package:collection/collection.dart';
-import 'package:lantern/src/ast.dart';
+import 'package:lantern/src/ast/ast.dart';
 
 bool Function(dynamic, dynamic) _eq = DeepCollectionEquality().equals;
 

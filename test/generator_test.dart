@@ -1,5 +1,5 @@
-import 'package:lantern/src/analyzer.dart';
-import 'package:lantern/src/ast.dart';
+import 'package:lantern/src/ast/analyzer.dart';
+import 'package:lantern/src/ast/ast.dart';
 import 'package:lantern/src/generator/generator.dart';
 import 'package:test/test.dart';
 
