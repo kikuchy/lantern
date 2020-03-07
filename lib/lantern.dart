@@ -1,8 +1,10 @@
-import 'package:lantern/src/analyzer.dart';
-import 'package:lantern/src/ast.dart';
-import 'package:lantern/src/checker.dart';
+import 'package:lantern/src/ast/analyzer.dart';
+import 'package:lantern/src/ast/checker.dart';
+import 'package:lantern/src/frontend/lantern_parser.dart';
+import 'package:lantern/src/generator/dart_generator.dart';
 import 'package:lantern/src/generator/generator.dart';
-import 'package:lantern/src/lantern_parser.dart';
+import 'package:lantern/src/generator/swift_generator.dart';
+import 'package:lantern/src/generator/typescript_generator.dart';
 
 List<GeneratedCodeFile> parseLantern(String source) {
   final parser = LanternParser();

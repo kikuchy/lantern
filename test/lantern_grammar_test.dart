@@ -1,4 +1,4 @@
-import 'package:lantern/src/lantern_grammar.dart';
+import 'package:lantern/src/frontend/lantern_grammar.dart';
 import 'package:test/test.dart';
 
 class _TestCase {
