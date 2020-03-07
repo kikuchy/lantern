@@ -1,3 +1,7 @@
+## 0.0.5
+
+- Allow nulls of Document parameters on Dart.
+
 ## 0.0.4+4
 
 - Hotfix: fix mistake of https://github.com/kikuchy/lantern/issues/6 .
