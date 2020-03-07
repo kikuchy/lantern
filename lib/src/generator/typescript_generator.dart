@@ -1,4 +1,6 @@
-part of './generator.dart';
+import 'package:lantern/src/ast/analyzer.dart';
+import 'package:lantern/src/ast/ast.dart' as ast;
+import 'package:lantern/src/generator/generator.dart';
 
 class TypeScriptGenerator implements CodeGenerator {
   @override
