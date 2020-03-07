@@ -175,9 +175,6 @@ class DartCodeGenerator implements CodeGenerator {
       ..returns = refer("Map<String, dynamic>")
       ..name = "toData"
       ..body = Block.of([
-        ...fields
-            .where((f) => !f.type.nullable)
-            .map((f) => Code("assert(${f.name} != null);")),
         Code("final data = <String, dynamic>{};"),
         ...fields.map(_writingExpressionFor),
         Code("return data;"),
@@ -266,9 +263,9 @@ class DartCodeGenerator implements CodeGenerator {
       case ast.DeclaredType.map:
       case ast.DeclaredType.timestamp:
       case ast.DeclaredType.geopoint:
-        return "write";
+        return "writeNotNull";
       case ast.DeclaredType.file:
-        return "writeStorage";
+        return "writeStorageNotNull";
       default:
         if (type is ast.TypedType && type.name == "array") {
           switch (type.typeParameter) {
@@ -280,26 +277,26 @@ class DartCodeGenerator implements CodeGenerator {
             case ast.DeclaredType.map:
             case ast.DeclaredType.timestamp:
             case ast.DeclaredType.geopoint:
-              return "write";
+              return "writeNotNull";
             case ast.DeclaredType.file:
-              return "writeStorageList";
+              return "writeStorageListNotNull";
             default:
               if (type is ast.TypedType && type.name == "reference") {
-                return "write";
+                return "writeNotNull";
               } else if (type is ast.HasValueType && type.name == "enum") {
-                return "write";
+                return "writeNotNull";
               } else if (type is ast.TypedType && type.name == "struct" ||
                   type is ast.HasStructType) {
-                return "writeModelList";
+                return "writeModelListNotNull";
               }
           }
         } else if (type is ast.TypedType && type.name == "reference") {
-          return "write";
+          return "writeNotNull";
         } else if (type is ast.HasValueType && type.name == "enum") {
-          return "write";
+          return "writeNotNull";
         } else if (type is ast.TypedType && type.name == "struct" ||
             type is ast.HasStructType) {
-          return "writeModel";
+          return "writeModelNotNull";
         }
     }
   }
