@@ -99,7 +99,7 @@ class LanternGrammarDefinition extends GrammarDefinition {
           ref(timestampType) |
           ref(geopointType) |
           ref(referenceType) |
-          ref(enumType) |
+          ref(enumDefiningType) |
           ref(fileType) |
           ref(structReferencingType) |
           ref(structDefiningType) |
@@ -134,12 +134,15 @@ class LanternGrammarDefinition extends GrammarDefinition {
 
   Parser fileType() => ref(token, "file");
 
-  Parser enumType() =>
+  Parser enumDefiningType() =>
       ref(token, "enum") &
       ref(typeNameDefinition) &
       ref(token, "{") &
       ref(enumContentDefinition) &
       ref(token, "}");
+
+  Parser enumReferencingType() =>
+      ref(token, "enum") & ref(typeParameter, typeNameDefinition());
 
   Parser structReferencingType() =>
       ref(token, "struct") & ref(typeParameter, typeNameDefinition());
@@ -169,6 +172,8 @@ class LanternGrammarDefinition extends GrammarDefinition {
       ref(fileType) |
       ref(structReferencingType) |
       ref(structDefiningType) |
+      ref(enumDefiningType) |
+      ref(enumReferencingType) |
       ref(nullType);
 
   Parser typeNameDefinition() => pattern("A-Za-z0-9_").plus();

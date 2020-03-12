@@ -196,6 +196,8 @@ class TypedType extends DeclaredType {
   factory TypedType.reference(DeclaredType t) => TypedType("reference", t);
 
   factory TypedType.struct(DeclaredType t) => TypedType("struct", t);
+
+  factory TypedType.enum$(DeclaredType t) => TypedType("enum", t);
 }
 
 class HasValueType extends DeclaredType {

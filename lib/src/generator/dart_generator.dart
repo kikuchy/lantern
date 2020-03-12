@@ -30,9 +30,7 @@ class DartCodeGenerator implements CodeGenerator {
       ..body.addAll([
         if (document.name != null) _documentModelClass(document, analyzed),
         if (document.name != null) _documentSchemaClass(document, analyzed),
-        ...document.fields
-            .where((f) => f.type.type is ast.HasValueType)
-            .map((f) => _enumClass(f)),
+        ...analyzed.definedEnums.map((f) => _enumClass(f)),
         ...document.fields
             .where((f) => f.type.type is ast.HasStructType)
             .map((f) => _codeForStruct(f, analyzed))
@@ -220,6 +218,10 @@ class DartCodeGenerator implements CodeGenerator {
           return _referFirestore("DocumentSnapshot");
         } else if (type is ast.HasValueType && type.name == "enum") {
           return refer(type.identity);
+        } else if (type is ast.TypedType && type.name == "enum") {
+          final definition = analyzed.definedEnums
+              .firstWhere((e) => e.identity == type.typeParameter.name);
+          return refer(definition.identity);
         } else if (type is ast.TypedType && type.name == "struct") {
           final definition = analyzed.definedStructs
               .firstWhere((s) => s.name == type.typeParameter.name);
@@ -281,18 +283,23 @@ class DartCodeGenerator implements CodeGenerator {
             case ast.DeclaredType.file:
               return "writeStorageListNotNull";
             default:
-              if (type is ast.TypedType && type.name == "reference") {
+              final innerType = type.typeParameter;
+              if (innerType is ast.TypedType && innerType.name == "reference") {
                 return "writeNotNull";
-              } else if (type is ast.HasValueType && type.name == "enum") {
+              } else if (innerType is ast.HasValueType &&
+                      innerType.name == "enum" ||
+                  innerType is ast.TypedType && innerType.name == "enum") {
                 return "writeNotNull";
-              } else if (type is ast.TypedType && type.name == "struct" ||
-                  type is ast.HasStructType) {
+              } else if (innerType is ast.TypedType &&
+                      innerType.name == "struct" ||
+                  innerType is ast.HasStructType) {
                 return "writeModelListNotNull";
               }
           }
         } else if (type is ast.TypedType && type.name == "reference") {
           return "writeNotNull";
-        } else if (type is ast.HasValueType && type.name == "enum") {
+        } else if (type is ast.HasValueType && type.name == "enum" ||
+            type is ast.TypedType && type.name == "enum") {
           return "writeNotNull";
         } else if (type is ast.TypedType && type.name == "struct" ||
             type is ast.HasStructType) {
@@ -365,12 +372,12 @@ class DartCodeGenerator implements CodeGenerator {
               assigning = refer("storageFiles").call(argsForReader);
               break;
             default:
-              if (type.typeParameter is ast.TypedType &&
-                  type.typeParameter.name == "reference") {
+              final innerType = type.typeParameter;
+              if (innerType is ast.TypedType && innerType.name == "reference") {
                 assigning = refer("valueListFromKey").call(argsForReader);
                 break;
-              } else if (type.typeParameter is ast.HasValueType &&
-                  type.typeParameter.name == "enum") {
+              } else if (innerType is ast.HasValueType &&
+                  innerType.name == "enum") {
                 assigning = refer("valueListFromKey<String>")
                     .call(argsForReader)
                     .property("map")
@@ -379,17 +386,34 @@ class DartCodeGenerator implements CodeGenerator {
                     Code("(s) =>"),
                     refer("s != null")
                         .conditional(
-                            refer(type.typeParameter.name)
+                            refer(innerType.identity)
                                 .newInstanceNamed("fromValue", [refer("s")]),
                             literal(null))
                         .code,
                   ]))
                 ]);
                 break;
-              } else if (type.typeParameter is ast.TypedType &&
-                  type.typeParameter.name == "struct") {
+              } else if (innerType is ast.TypedType &&
+                  innerType.name == "enum") {
+                assigning = refer("valueListFromKey<String>")
+                    .call(argsForReader)
+                    .property("map")
+                    .call([
+                  CodeExpression(Block.of([
+                    Code("(s) =>"),
+                    refer("s != null")
+                        .conditional(
+                            refer(innerType.typeParameter.name)
+                                .newInstanceNamed("fromValue", [refer("s")]),
+                            literal(null))
+                        .code,
+                  ]))
+                ]);
+                break;
+              } else if (innerType is ast.TypedType &&
+                  innerType.name == "struct") {
                 final definition = analyzed.definedStructs
-                    .firstWhere((s) => s.name == type.typeParameter.name);
+                    .firstWhere((s) => s.name == innerType.typeParameter.name);
                 assigning = refer("valueMapListFromKey<String, String>")
                     .call(argsForReader)
                     .property("map")
@@ -413,9 +437,8 @@ class DartCodeGenerator implements CodeGenerator {
                   ]))
                 ]);
                 break;
-              } else if (type.typeParameter is ast.HasStructType) {
-                final definition =
-                    (type.typeParameter as ast.HasStructType).definition;
+              } else if (innerType is ast.HasStructType) {
+                final definition = innerType.definition;
                 assigning = refer("valueMapListFromKey<String, String>")
                     .call(argsForReader)
                     .property("map")
@@ -447,6 +470,12 @@ class DartCodeGenerator implements CodeGenerator {
           assigning = refer(
                   "((v) => (v != null) ? ${type.identity}.fromValue(v) : null)")
               .call([refer("valueFromKey<String>").call(argsForReader)]);
+        } else if (type is ast.TypedType && type.name == "enum") {
+          final definition = analyzed.definedEnums
+              .firstWhere((e) => e.identity == type.typeParameter.name);
+          assigning = refer(
+                  "((v) => (v != null) ? ${definition.identity}.fromValue(v) : null)")
+              .call([refer("valueFromKey<String>").call(argsForReader)]);
         } else if (type is ast.TypedType && type.name == "struct") {
           final definition = analyzed.definedStructs
               .firstWhere((s) => s.name == type.typeParameter.name);
@@ -473,8 +502,7 @@ class DartCodeGenerator implements CodeGenerator {
     return refer(field.name).assign(assigning).statement;
   }
 
-  Class _enumClass(ast.Field field) {
-    final enumDef = field.type.type as ast.HasValueType;
+  Class _enumClass(ast.HasValueType enumDef) {
     return Class((b) => b
       ..name = enumDef.identity
       ..fields.addAll([
