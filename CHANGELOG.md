@@ -1,3 +1,7 @@
+## 0.0.6
+
+- Support enum referencing `enum<T>` type
+
 ## 0.0.5
 
 - Allow nulls of Document parameters on Dart.

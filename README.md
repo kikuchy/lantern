@@ -42,7 +42,7 @@ It can provide code for ...
 * Swift (depends on [Ballcap-iOS](https://github.com/1amageek/Ballcap-iOS))
 * Dart (depends on [flamingo](https://pub.dev/packages/flamingo))
 * TypeScript (depends on [ballcap.ts](https://github.com/1amageek/ballcap.ts))
-* Security rule file for Firestore
+* ~~Security rule file for Firestore~~
 
 ## Install
 
@@ -83,19 +83,20 @@ And have fields and `collection`s in body.
 ### Fields and Types
 
 ```
-    string                  name
-    boolean                 isAdult
-    integer                 level
-    number                  score
-    url                     blogUrl
-    array<string>           appeals
-    map                     history
-    timestamp               birthday
-    geopoint                lastUsedFrom
-    enum {free, purchased}  memberRank
-    reference<DocumentName> relatedDocument
-    struct<DocumentName>    embeddedDocument
-    struct { string a }     embeddedStruct
+    string                      name
+    boolean                     isAdult
+    integer                     level
+    number                      score
+    url                         blogUrl
+    array<string>               appeals
+    map                         history
+    timestamp                   birthday
+    geopoint                    lastUsedFrom
+    enum Rank {free, purchased} memberRank
+    enum<Rank>                  anotherRank
+    reference<DocumentName>     relatedDocument
+    struct<DocumentName>        embeddedDocument
+    struct S { string a }       embeddedStruct
 ```
 
 |Lantern Type|Firestore Type|Swift Type|Dart type|TypeScript Type|
@@ -113,4 +114,5 @@ And have fields and `collection`s in body.
 |`struct<T>`|`map`|`T` (T should be Codable)|`T` (Document)|`T` (Document)|
 |`file`|`map` (file will be uploaded to Cloud Storage)|`File`|`StorageFile`|`File`|
 |`enum{elements...}`|`string`|`enum` (enum classes will be generated)|`enum`(enum classes will be generated)|`enum`(const enum of string will be generated)|
+|`enum<T>`|`string`| `T` (T should be enum) |`T` (T should be enum) |`T` (T should be enum) |
 |`struct S {fields...}`|`map`|`S` (Codable class will be generated)|`SModel` (Model class will be generated)|`S` (interface will be generated)|
