@@ -30,7 +30,21 @@ class DartCodeGenerator implements CodeGenerator {
       ..body.addAll([
         if (document.name != null) _documentModelClass(document, analyzed),
         if (document.name != null) _documentSchemaClass(document, analyzed),
-        ...analyzed.definedEnums.map((f) => _enumClass(f)),
+        ...document.fields
+            .map((f) => f.type.type)
+            .map((type) {
+              if (type is ast.HasValueType) {
+                return type;
+              } else if (type is ast.TypedType &&
+                  type.name == "array" &&
+                  type.typeParameter is ast.HasValueType) {
+                return type.typeParameter;
+              }
+              return null;
+            })
+            .where((e) => e != null)
+            .cast<ast.HasValueType>()
+            .map((t) => _enumClass(t, analyzed)),
         ...document.fields
             .where((f) => f.type.type is ast.HasStructType)
             .map((f) => _codeForStruct(f, analyzed))
@@ -502,7 +516,7 @@ class DartCodeGenerator implements CodeGenerator {
     return refer(field.name).assign(assigning).statement;
   }
 
-  Class _enumClass(ast.HasValueType enumDef) {
+  Class _enumClass(ast.HasValueType enumDef, AnalyzingResult analyzed) {
     return Class((b) => b
       ..name = enumDef.identity
       ..fields.addAll([

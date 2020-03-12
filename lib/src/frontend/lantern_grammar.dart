@@ -100,6 +100,7 @@ class LanternGrammarDefinition extends GrammarDefinition {
           ref(geopointType) |
           ref(referenceType) |
           ref(enumDefiningType) |
+          ref(enumReferencingType) |
           ref(fileType) |
           ref(structReferencingType) |
           ref(structDefiningType) |
