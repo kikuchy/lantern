@@ -1,6 +1,10 @@
+## 0.0.6+1
+
+- Hotfix: fix mistake that enum referencing type field is not supported.
+
 ## 0.0.6
 
-- Support enum referencing `enum<T>` type
+- Support enum referencing `enum<T>` type.
 
 ## 0.0.5
 
