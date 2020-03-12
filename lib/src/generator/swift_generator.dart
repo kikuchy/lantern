@@ -11,7 +11,7 @@ class SwiftCodeGenerator implements CodeGenerator {
   @override
   Iterable<GeneratedCodeFile> generate(
       ast.Schema schema, AnalyzingResult analyzed) {
-    return codeForCollections(schema.collections);
+    return codeForCollections(schema.collections, analyzed);
   }
 
   String _swiftTypeName(ast.DeclaredType type) {
@@ -50,6 +50,8 @@ class SwiftCodeGenerator implements CodeGenerator {
           return "Document<${type.typeParameter.name}>";
         } else if (type is ast.HasValueType && type.name == "enum") {
           return type.identity;
+        } else if (type is ast.TypedType && type.name == "enum") {
+          return type.typeParameter.name;
         } else if (type is ast.TypedType && type.name == "struct") {
           return type.typeParameter.name;
         }
@@ -61,7 +63,7 @@ class SwiftCodeGenerator implements CodeGenerator {
     return "$name${firestoreType.nullable ? "?" : ""}";
   }
 
-  String _swiftDefaultValue(ast.DeclaredType type) {
+  String _swiftDefaultValue(ast.DeclaredType type, AnalyzingResult analyzed) {
     switch (type) {
       case ast.DeclaredType.string:
         return "\"\"";
@@ -88,6 +90,10 @@ class SwiftCodeGenerator implements CodeGenerator {
           return "Document<${type.typeParameter.name}>()";
         } else if (type is ast.HasValueType && type.name == "enum") {
           return ".${type.values.first}";
+        } else if (type is ast.TypedType && type.name == "enum") {
+          final definition = analyzed.definedEnums
+              .firstWhere((e) => e.identity == type.typeParameter.name);
+          return ".${definition.values.first}";
         } else if (type is ast.TypedType && type.name == "struct") {
           return "${type.typeParameter.name}()";
         }
@@ -95,14 +101,14 @@ class SwiftCodeGenerator implements CodeGenerator {
   }
 
   Iterable<GeneratedCodeFile> codeForCollections(
-      Iterable<ast.Collection> collections) {
+      Iterable<ast.Collection> collections, AnalyzingResult analyzed) {
     return collections
-        .map((c) => codeForDocument(c.document, c))
+        .map((c) => codeForDocument(c.document, c, analyzed))
         .expand((i) => i);
   }
 
   Iterable<GeneratedCodeFile> codeForDocument(
-      ast.Document document, ast.Collection parent) {
+      ast.Document document, ast.Collection parent, AnalyzingResult analyzed) {
     return [
       if (document.name != null)
         GeneratedCodeFile("$basePath/Firebase+${document.name}.swift", """
@@ -117,7 +123,7 @@ extension Firebase {
         }""" : ""}
 
         struct Model: Modelable & Codable {
-            ${document.fields.map((f) => "var ${f.name}: ${_swiftFieldTypeDeclaration(f.type)}${f.type.nullable ? "" : " = ${_swiftDefaultValue(f.type.type)}"}").join("\n            ")}
+            ${document.fields.map((f) => "var ${f.name}: ${_swiftFieldTypeDeclaration(f.type)}${f.type.nullable ? "" : " = ${_swiftDefaultValue(f.type.type, analyzed)}"}").join("\n            ")}
         }
         
         ${document.fields.where((f) => f.type.type is ast.HasValueType).map((f) => f.type.type as ast.HasValueType).map((t) => """enum ${t.identity}: CaseIterable, RawRepresentable, Codable {
@@ -138,7 +144,7 @@ extension Firebase {
     }
 }
           """),
-      ...codeForCollections(document.collections)
+      ...codeForCollections(document.collections, analyzed)
     ];
   }
 }

@@ -206,6 +206,8 @@ extension _TsDeclaerdTypeExtension on ast.DeclaredType {
                               .firstWhere(
                                   (s) => s.name == t.typeParameter.name)]
                           .name);
+            case "enum":
+              return t.typeParameter.name;
           }
         } else if (t is ast.HasValueType) {
           switch (t.name) {
@@ -251,6 +253,10 @@ extension _TsDeclaerdTypeExtension on ast.DeclaredType {
               throw "TODO: Not impletemted";
             case "struct":
               return "new ${allocator.alloc(t.typeParameter.name, "./" + analyzed.parentDocumentOfStruct[t.typeParameter].name)}()";
+            case "enum":
+              final definition = analyzed.definedEnums
+                  .firstWhere((e) => e.identity == t.typeParameter.name);
+              return "${definition.identity}.${definition.values.first}";
           }
         } else if (t is ast.HasValueType) {
           switch (t.name) {
