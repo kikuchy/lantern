@@ -69,8 +69,10 @@ class TypeChecker {
   void _validateDocumentReferencing(AnalyzingResult analyzed) {
     final unifiedDocuments =
         analyzed.definedDocuments.map((d) => d.name).toSet();
-    final unifiedReferences =
-        analyzed.referenceToDocument.map((r) => r.typeParameter.name).toSet();
+    final unifiedReferences = analyzed.referenceToDocument
+        .map((r) => r.typeParameter.name)
+        .where((n) => n != null && n.isNotEmpty)
+        .toSet();
 
     if (!unifiedDocuments.containsAll(unifiedReferences)) {
       final undefinedButReferencedDocumentNames =
