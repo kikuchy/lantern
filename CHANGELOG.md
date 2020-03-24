@@ -1,3 +1,8 @@
+## 0.0.6+2
+
+- Hotfix: fix mistake that type parameters of `reference` is not optional.
+    - Now, type parameter of `reference` is optional.
+
 ## 0.0.6+1
 
 - Hotfix: fix mistake that enum referencing type field is not supported.

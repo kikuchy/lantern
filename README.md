@@ -110,7 +110,7 @@ And have fields and `collection`s in body.
 |`map`|`map`|`[String : Any]`|`Map<String, dynamic>`|`{}`|
 |`timestamp`|`timestamp`|`Timestamp`|`Timestamp`|`Timestamp`|
 |`geopoint`|`geopoint`|`GeoPoint`|`GeoPoint`|`GeoPoint`|
-|`reference<T>`|`reference`|`Document<T>`|`TDocument` (Document referencing class will be generated)|`DocumentRefernce`| 
+|`reference<T>`|`reference`|`DocumentReference` (`T` will be omitted)|`DocumentRefernce` (`T` will be omitted)|`DocumentRefernce` (`T` will be omitted)| 
 |`struct<T>`|`map`|`T` (T should be Codable)|`T` (Document)|`T` (Document)|
 |`file`|`map` (file will be uploaded to Cloud Storage)|`File`|`StorageFile`|`File`|
 |`enum{elements...}`|`string`|`enum` (enum classes will be generated)|`enum`(enum classes will be generated)|`enum`(const enum of string will be generated)|
