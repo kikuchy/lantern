@@ -249,8 +249,7 @@ extension _TsDeclaerdTypeExtension on ast.DeclaredType {
             case "array":
               return "[]";
             case "reference":
-              // TODO: Referenceのフォルト値とは…
-              throw "TODO: Not impletemted";
+              return "new DocumentReference()";
             case "struct":
               return "new ${allocator.alloc(t.typeParameter.name, "./" + analyzed.parentDocumentOfStruct[t.typeParameter].name)}()";
             case "enum":
