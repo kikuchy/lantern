@@ -249,7 +249,10 @@ extension _TsDeclaerdTypeExtension on ast.DeclaredType {
             case "array":
               return "[]";
             case "reference":
-              return "new DocumentReference()";
+              return "new " +
+                  allocator.alloc(
+                      "DocumentReference", "@1amageek/ballcap-admin") +
+                  "()";
             case "struct":
               return "new ${allocator.alloc(t.typeParameter.name, "./" + analyzed.parentDocumentOfStruct[t.typeParameter].name)}()";
             case "enum":
