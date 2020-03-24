@@ -47,7 +47,7 @@ class SwiftCodeGenerator implements CodeGenerator {
         if (type is ast.TypedType && type.name == "array") {
           return "[${_swiftTypeName(type.typeParameter)}]";
         } else if (type is ast.TypedType && type.name == "reference") {
-          return "Document<${type.typeParameter.name}>";
+          return "DocumentReference";
         } else if (type is ast.HasValueType && type.name == "enum") {
           return type.identity;
         } else if (type is ast.TypedType && type.name == "enum") {
@@ -87,7 +87,7 @@ class SwiftCodeGenerator implements CodeGenerator {
         if (type is ast.TypedType && type.name == "array") {
           return "[]";
         } else if (type is ast.TypedType && type.name == "reference") {
-          return "Document<${type.typeParameter.name}>()";
+          return "DocumentReference()";
         } else if (type is ast.HasValueType && type.name == "enum") {
           return ".${type.values.first}";
         } else if (type is ast.TypedType && type.name == "enum") {
