@@ -229,7 +229,7 @@ class DartCodeGenerator implements CodeGenerator {
                 _dartTypeReference(type.typeParameter, analyzed),
             ]));
         } else if (type is ast.TypedType && type.name == "reference") {
-          return _referFirestore("DocumentSnapshot");
+          return _referFirestore("DocumentReference");
         } else if (type is ast.HasValueType && type.name == "enum") {
           return refer(type.identity);
         } else if (type is ast.TypedType && type.name == "enum") {

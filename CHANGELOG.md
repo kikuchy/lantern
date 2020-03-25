@@ -1,3 +1,7 @@
+## 0.0.6+3
+
+- Hotfix: fix mistake that `DocumentSnapshot` and `DocumentReference`.
+
 ## 0.0.6+2
 
 - Hotfix: fix mistake that type parameters of `reference` is not optional.
